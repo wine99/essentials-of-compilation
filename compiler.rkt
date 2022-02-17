@@ -4,11 +4,12 @@
 (require "interp-Lint.rkt")
 (require "interp-Lvar.rkt")
 (require "interp-Cvar.rkt")
+(require "interp.rkt")
+(require "type-check-Cvar.rkt")
 (require "utilities.rkt")
 (provide (all-defined-out))
 
 
-;; Next we have the partial evaluation pass described in the book.
 (define (pe-neg r)
   (match r
     [(Int n) (Int (fx- 0 n))]
@@ -30,6 +31,12 @@
   (match p
     [(Program info e) (Program info (pe-exp e))]))
 
+
+;; uniquify : R1 -> R1
+(define (uniquify p)
+  (match p
+    [(Program info e) (Program info ((uniquify-exp '()) e))]))
+
 (define (uniquify-exp env)
   (lambda (e)
     (match e
@@ -48,11 +55,6 @@
               ((uniquify-exp (cons (cons x new-x) env)) body)))]
       [(Prim op es)
        (Prim op (for/list ([e es]) ((uniquify-exp env) e)))])))
-
-;; uniquify : R1 -> R1
-(define (uniquify p)
-  (match p
-    [(Program info e) (Program info ((uniquify-exp '()) e))]))
 
 
 ;; remove-complex-opera* : R1 -> R1
@@ -101,7 +103,8 @@
 ;; explicate-control : R1 -> C0
 (define (explicate-control p)
   (match p
-    [(Program info e) (CProgram info `((start . ,(explicate-tail e))))]))
+    [(Program info e)
+     (type-check-Cvar (CProgram info `((start . ,(explicate-tail e)))))]))
 
 (define (explicate-tail e)
   (match e
@@ -118,15 +121,143 @@
 
 ;; select-instructions : C0 -> pseudo-x86
 (define (select-instructions p)
-  (error "TODO: code goes here (select-instructions)"))
+  (match p
+    [(CProgram info blocks)
+     (X86Program info
+                 (for/list ([(label tail) (in-dict blocks)])
+                   (cons label (Block '() (select-instr-tail tail)))))]
+;    [(CProgram info `((start . ,t)))
+;     (X86Program info (list (cons 'start (Block '() (select-instr-tail t)))))]
+    ))
+
+(define (select-instr-tail t)
+  (match t
+    [(Seq stmt t*) 
+     (append (select-instr-stmt stmt) (select-instr-tail t*))]
+    [(Return (Prim 'read '())) 
+     (list (Callq 'read_int) (Jmp 'conclusion))]
+    [(Return e) (append
+                 (select-instr-assign (Reg 'rax) e)
+                 (list (Jmp 'conclusion)))]))
+
+(define (select-instr-atm a)
+  (match a
+    [(Int i) (Imm i)]
+    [(Var _) a]))
+
+(define (select-instr-stmt stmt)
+  (match stmt
+    [(Assign (Var x) e)
+     (match e
+       [(Prim '+ (list (Var x1) a2))
+        #:when (equal? x x1)
+        (list (Instr 'addq (list (select-instr-atm a2) (Var x))))]
+       [(Prim '+ (list a1 (Var x2)))
+        #:when (equal? x x2)
+        (list (Instr 'addq (list (select-instr-atm a1) (Var x))))]
+       [(Prim '+ (list (Int n) a2))
+        (list (Instr 'movq (list (select-instr-atm a2) (Var x)))
+              (Instr 'addq (list (Imm n) (Var x))))]
+;       [(Prim '- (list (Var x1) (Var x2)))
+;        #:when (and (equal? x x1) (equal? x x2))
+;        (list (Instr 'movq 0 (Var x)))]
+;       [(Prim '- (list (Var x1) a2))
+;        #:when (equal? x x1)
+;        (list (Instr 'subq (list (select-instr-atm a2) (Var x))))]
+;       ;; TODO 要不要处理这种特殊情况？
+;       [(Prim '- (list (Int n) (Var y)))
+;        (list (Instr 'movq (list (Var y) (Var x)))
+;              (Instr 'negq (list (Var x)))
+;              (Instr 'addq (list (Imm n) (Var x))))]
+       [_ (select-instr-assign (Var x) e)])]))
+
+(define (select-instr-assign v e)
+  (match e
+    [(Int i)
+     (list (Instr 'movq (list (select-instr-atm e) v)))]
+    [(Var _)
+     (list (Instr 'movq (list (select-instr-atm e) v)))]
+    [(Prim 'read '())
+     (list (Callq 'read_int)
+           (Instr 'movq (list (Reg 'rax) v)))]
+    [(Prim '- (list a))
+     (list (Instr 'movq (list (select-instr-atm a) v))
+           (Instr 'negq (list v)))]
+    [(Prim '+ (list a1 a2))
+     (list (Instr 'movq (list (select-instr-atm a1) v))
+           (Instr 'addq (list (select-instr-atm a2) v)))]
+;    [(Prim '- (list a1 a2))
+;     (list (Instr 'movq (list (select-instr-atm a1) v))
+;           (Instr 'subq (list (select-instr-atm a2) v)))]
+    ))
+
 
 ;; assign-homes : pseudo-x86 -> pseudo-x86
 (define (assign-homes p)
-  (error "TODO: code goes here (assign-homes)"))
+  (match p
+    [(X86Program `((locals-types . ,locals-types)) blocks)
+     (define locals-homes (calc-locals-homes locals-types))
+     (X86Program
+      `((stack-space . ,(* 8 (length locals-homes)))
+        (locals-types . ,locals-types))
+      (for/list ([(label block) (in-dict blocks)])
+        (cons label (assign-homes-block block locals-homes))))]))
+
+(define (calc-locals-homes locals-types)
+  (define (aux res types current-index)
+    (if (null? types)
+        res
+        (aux (cons (cons (caar types) (Deref 'rbp (* -8 current-index)))
+                   res)
+             (cdr types)
+             (add1 current-index))))
+  (aux '() locals-types 1))
+
+(define (assign-homes-block block locals-homes)
+  (match block
+    [(Block info instrs)
+     (Block info
+            (for/list ([instr instrs])
+              (assign-homes-instr instr locals-homes)))]))
+
+(define (assign-homes-instr instr locals-homes)
+  (match instr
+    [(Instr op `(,arg1 ,arg2))
+     (Instr op (list (assign-homes-arg arg1 locals-homes)
+                     (assign-homes-arg arg2 locals-homes)))]
+    [(Instr op `(,arg))
+     (Instr op (list (assign-homes-arg arg locals-homes)))]
+    [_ instr]))
+
+(define (assign-homes-arg arg locals-homes)
+  (match arg
+    [(Var x) (cdr (assoc x locals-homes))]
+    [_ arg]))
+
 
 ;; patch-instructions : psuedo-x86 -> x86
 (define (patch-instructions p)
-  (error "TODO: code goes here (patch-instructions)"))
+  (match p
+    [(X86Program info blocks)
+     (X86Program
+      info
+      (for/list ([(label block) (in-dict blocks)])
+        (cons label (patch-instr-block block))))]))
+
+(define (patch-instr-block block)
+  (match block
+    [(Block info instrs)
+     (Block
+      info
+      (append-map
+       (lambda (instr)
+         (match instr
+           [(Instr op (list (Deref reg1 off1) (Deref reg2 off2)))
+            (list (Instr 'movq (list (Deref reg1 off1) (Reg 'rax)))
+                  (Instr op (list (Reg 'rax) (Deref reg2 off2))))]
+           [_ (list instr)]))
+       instrs))]))
+
 
 ;; prelude-and-conclusion : x86 -> x86
 (define (prelude-and-conclusion p)
@@ -139,9 +270,9 @@
   `(("uniquify" ,uniquify ,interp-Lvar)
     ("remove complex opera*" ,remove-complex-opera* ,interp-Lvar)
     ("explicate control" ,explicate-control ,interp-Cvar)
-    ;; ("instruction selection" ,select-instructions ,interp-x86-0)
-    ;; ("assign homes" ,assign-homes ,interp-x86-0)
-    ;; ("patch instructions" ,patch-instructions ,interp-x86-0)
+    ("instruction selection" ,select-instructions ,interp-pseudo-x86-0)
+    ("assign homes" ,assign-homes ,interp-x86-0)
+    ("patch instructions" ,patch-instructions ,interp-x86-0)
     ;; ("prelude-and-conclusion" ,prelude-and-conclusion ,interp-x86-0)
     ))
 
