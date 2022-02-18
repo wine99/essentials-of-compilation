@@ -134,8 +134,8 @@
   (match t
     [(Seq stmt t*) 
      (append (select-instr-stmt stmt) (select-instr-tail t*))]
-    [(Return (Prim 'read '())) 
-     (list (Callq 'read_int) (Jmp 'conclusion))]
+    [(Return (Prim 'read '()))
+     (list (Callq 'read_int 0) (Jmp 'conclusion))]
     [(Return e) (append
                  (select-instr-assign (Reg 'rax) e)
                  (list (Jmp 'conclusion)))]))
@@ -178,7 +178,7 @@
     [(Var _)
      (list (Instr 'movq (list (select-instr-atm e) v)))]
     [(Prim 'read '())
-     (list (Callq 'read_int)
+     (list (Callq 'read_int 0)
            (Instr 'movq (list (Reg 'rax) v)))]
     [(Prim '- (list a))
      (list (Instr 'movq (list (select-instr-atm a) v))
@@ -198,7 +198,7 @@
     [(X86Program `((locals-types . ,locals-types)) blocks)
      (define locals-homes (calc-locals-homes locals-types))
      (X86Program
-      `((stack-space . ,(* 8 (length locals-homes)))
+      `((stack-space . ,(align (* 8 (length locals-homes)) 16))
         (locals-types . ,locals-types))
       (for/list ([(label block) (in-dict blocks)])
         (cons label (assign-homes-block block locals-homes))))]))
@@ -261,7 +261,31 @@
 
 ;; prelude-and-conclusion : x86 -> x86
 (define (prelude-and-conclusion p)
-  (error "TODO: code goes here (prelude-and-conclusion)"))
+  (match p
+    [(X86Program info blocks)
+     (let ([stack-space (cdr (assoc 'stack-space info))])
+       (X86Program
+        info
+        (append blocks
+                (list (generate-prelude stack-space)
+                      (generate-conclusion stack-space)))))]))
+
+(define (generate-prelude stack-space)
+  (cons 'main
+        (Block
+         '()
+         (list (Instr 'pushq (list (Reg 'rbp)))
+               (Instr 'movq (list (Reg 'rsp) (Reg 'rbp)))
+               (Instr 'subq (list (Imm stack-space) (Reg 'rsp)))
+               (Jmp 'start)))))
+
+(define (generate-conclusion stack-space)
+  (cons 'conclusion
+        (Block
+         '()
+         (list (Instr 'addq (list (Imm stack-space) (Reg 'rsp)))
+               (Instr 'popq (list (Reg 'rbp)))
+               (Retq)))))
 
 ;; Define the compiler passes to be used by interp-tests and the grader
 ;; Note that your compiler file (the file that defines the passes)
@@ -273,6 +297,6 @@
     ("instruction selection" ,select-instructions ,interp-pseudo-x86-0)
     ("assign homes" ,assign-homes ,interp-x86-0)
     ("patch instructions" ,patch-instructions ,interp-x86-0)
-    ;; ("prelude-and-conclusion" ,prelude-and-conclusion ,interp-x86-0)
+    ("prelude-and-conclusion" ,prelude-and-conclusion ,interp-x86-0)
     ))
 
