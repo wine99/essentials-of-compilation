@@ -41,5 +41,5 @@
 
 (define (assign-homes-arg arg locals-homes)
   (match arg
-    [(Var x) (cdr (assoc x locals-homes))]
+    [(Var x) (dict-ref locals-homes x)]
     [_ arg]))

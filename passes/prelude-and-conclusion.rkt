@@ -6,7 +6,7 @@
 (define (prelude-and-conclusion p)
   (match p
     [(X86Program info blocks)
-     (let ([stack-space (cdr (assoc 'stack-space info))])
+     (let ([stack-space (dict-ref info 'stack-space)])
        (X86Program
         info
         (append blocks
