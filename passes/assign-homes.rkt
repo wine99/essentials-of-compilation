@@ -1,11 +1,13 @@
 #lang racket
 (require "../utilities.rkt")
-(provide assign-homes)
+; (provide assign-homes)
+(provide assign-homes-block)
 
 ;; assign-homes : pseudo-x86 -> pseudo-x86
 (define (assign-homes p)
   (match p
-    [(X86Program `((locals-types . ,locals-types)) blocks)
+    [(X86Program info blocks)
+     (define locals-types (dict-ref info 'locals-types))
      (define locals-homes (calc-locals-homes locals-types))
      (X86Program
       `((stack-space . ,(align (* 8 (length locals-homes)) 16))

@@ -1,6 +1,6 @@
 #lang racket
 (require "../utilities.rkt")
-(provide uncover-live)
+(provide uncover-live vars-read vars-written live-labels arg->set)
 
 (define (uncover-live p)
   (match p
@@ -13,21 +13,14 @@
 (define (uncover-live-block block)
   (match block
     [(Block info instrs)
-     (Block (cons (cons 'live-after
-                        (uncover-live-instrs (reverse instrs)
-                                             (list (set))))
-                  info)
+     (Block (dict-set info 'live-afters (uncover-live-instrs (reverse instrs)
+                                                             (list (set))))
             instrs)]))
 
 (define (uncover-live-instrs reversed-instrs initial-sets)
-  ;(display reversed-instrs)
-  ;(display initial-sets)
   (match reversed-instrs
     ['() (cdr initial-sets)]
     [`(,instr . ,rst)
-     ;(display 3)
-     ;(display instr)
-     ;(display rst)
      (define live-prior (car initial-sets))
      (uncover-live-instrs
       rst
@@ -41,9 +34,6 @@
                                 (vars-written instr))
                   (vars-read instr))]))
 
-(define live-labels
-  `((conclusion . ,(set (Reg 'rax) (Reg 'rsp)))))
-
 (define (vars-read instr)
   (match instr
     [(or (Instr 'addq (list arg1 arg2))
@@ -52,7 +42,9 @@
     [(Instr 'movq (list arg1 arg2)) (arg->set arg1)]
     [(Instr 'negq (list arg)) (arg->set arg)]
     ; TODO book p38 callq
-    [(Callq label n) (set)]))
+    [(Callq label n) (set)]
+    ; jmp is handled in uncover-live-instr
+    [(Jmp label) (set)]))
 
 (define (vars-written instr)
   (match instr
@@ -60,11 +52,16 @@
     [(Instr 'negq (list arg)) (arg->set arg)]
     ; TODO book p38 callq, 为什么要把caller-save放进来
     ; 如果用到了caller-save里的寄存器，在call之前把这些寄存器push一下不就行了？
-    [(Callq label n) caller-save]))
+    [(Callq label n) caller-save]
+    ; jmp is handled in uncover-live-instr
+    [(Jmp label) (set)]))
 
 (define (arg->set arg)
   (match arg
     [(Imm n) (set)]
     [(Var x) (set x)]
-    [(Reg reg) (set (Reg reg))]
-    [(Deref reg int) (set (Reg reg))]))
+    [(Reg reg) (set reg)]
+    [(Deref reg int) (set reg)]))
+
+(define live-labels
+  `((conclusion . ,(set 'rax 'rsp))))
