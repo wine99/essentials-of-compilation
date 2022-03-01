@@ -89,4 +89,4 @@
       (Reg (color->register color))
       (Deref 'rbp
              (* -8 (+ num-used-callee-regs
-                       (- color num-registers-for-alloc))))))
+                       (- (+ color 1) num-registers-for-alloc))))))

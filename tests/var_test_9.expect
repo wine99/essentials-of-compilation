@@ -1,0 +1,82 @@
+### use rcx, no move biasing, book p46 ###
+
+  | Color |   Home    |
+  |-------|-----------|
+t |    0  |  rcx      |
+v |    1  | -8(%rbp)  |
+w |    0  |  rcx      |
+x |    1  | -8(%rbp)  |
+y |    2  | -16(%rbp) |
+z |    1  | -8(%rbp)  |
+
+movq $1, -8(%rbp)
+movq $42, %rcx
+addq $7, -8(%rbp)
+movq -8(%rbp), %rax
+movq %rax, -16(%rbp)
+addq %rcx, -8(%rbp)
+movq -16(%rbp), %rcx
+negq %rcx
+movq -8(%rbp), %rax
+addq %rcx, %rax
+jmp conclusion
+
+
+### use rbx and rcx, no move biasing ###
+
+  | Color |   Home    |
+  |-------|-----------|
+t |    0  |  rbx      |
+v |    1  |  rcx      |
+w |    0  |  rbx      |
+x |    1  |  rcx      |
+y |    2  | -16(%rbp) |
+z |    1  |  rcx      |
+
+movq $1, %rcx
+movq $42, %rbx
+addq $7, %rcx
+movq %rcx, -16(%rbp)
+addq %rbx, %rcx
+movq -16(%rbp), %rbx
+negq %rbx
+movq %rcx, %rax
+addq %rbx, %rax
+jmp conclusion
+
+
+### use rbx and rcx, move biasing, eg in website ###
+
+  | Color |   Home    |
+  |-------|-----------|
+t |    0  |  rbx      |
+v |    0  |  rbx      |
+w |    2  | -16(%rbp) |
+x |    0  |  rbx      |
+y |    0  |  rbx      |
+z |    1  |  rcx      |
+
+start:
+    movq	$1, %rbx
+    movq	$42, -16(%rbp)
+    addq	$7, %rbx
+    movq	%rbx, %rcx
+    addq	-16(%rbp), %rcx
+    negq	%rbx
+    movq	%rcx, %rax
+    addq	%rbx, %rax
+    jmp conclusion
+
+    .globl main
+main:
+    pushq	%rbp
+    movq	%rsp, %rbp
+    pushq	%rbx
+    subq	$8, %rsp
+    jmp start
+    
+conclusion:
+    addq	$8, %rsp
+    popq	%rbx
+    popq	%rbp
+    retq

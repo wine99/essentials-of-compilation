@@ -1,0 +1,24 @@
+### use rbx rcx, eg in website ###
+
+start:
+    callq	read_int
+    movq	%rax, %rbx
+    callq	read_int
+    movq	%rax, %rcx
+    addq	%rcx, %rbx
+    movq	%rbx, %rax
+    addq	$42, %rax
+    jmp conclusion
+
+    .globl main
+main:
+    pushq	%rbp
+    movq	%rsp, %rbp
+    pushq	%rbx
+    subq	$8, %rsp
+    jmp start
+conclusion:
+    addq	$8, %rsp
+    popq	%rbx
+    popq	%rbp
+    retq
