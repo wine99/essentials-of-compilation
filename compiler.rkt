@@ -28,6 +28,6 @@
     ("build interference" ,build-interference ,interp-pseudo-x86-0)
     ("allocate registers" ,allocate-registers ,interp-x86-0)
     ("patch instructions" ,patch-instructions ,interp-x86-0)
-    ;("prelude and conclusion" ,prelude-and-conclusion ,interp-x86-0)
+    ("prelude and conclusion" ,prelude-and-conclusion ,interp-x86-0)
     ))
 

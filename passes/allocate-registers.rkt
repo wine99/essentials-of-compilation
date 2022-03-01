@@ -5,24 +5,33 @@
 (require "assign-homes.rkt")
 (provide allocate-registers)
 
+; Alternative：对于callq，在build interference时，不做额外的连线
+; 在callq前push已经用到的caller-save，callq后pop，
+; 如果push了奇数个，还要再把rsp减8
+
 (define (allocate-registers p)
   (match p
     [(X86Program info blocks)
      (define vars
        (for/list ([(var type) (in-dict (dict-ref info 'locals-types))]) var))
      (define interf (dict-ref info 'conflicts))
+
      (define-values (vars-colors largest-color) (color-graph interf vars))
-     ; TODO used-caller-save-regs 要统计吗？是否应该在call指令前把它们push到栈上
      (define u-c-r (used-callee-regs vars-colors))
      (define num-u-c-r (set-count u-c-r))
      (define num-r-f-a (num-registers-for-alloc))
+     (define num-spilled (let ([tmp (- (+ largest-color 1) num-r-f-a)])
+                           (if (< tmp 0) 0 tmp)))
+
      (define locals-homes
        (for/hash ([var vars])
          (define home (color->home (hash-ref vars-colors var) num-r-f-a num-u-c-r))
          (verbose (format "home of ~a is ~a" var home))
          (values var home)))
      (X86Program
-      (dict-set info 'used-callee u-c-r)
+      ; (dict-set (dict-set info 'used-callee u-c-r)
+      ;           'stack-space (+ num-spilled num-u-c-r))
+      `((used-callee . ,u-c-r) (num-spilled . ,num-spilled))
       (for/list ([(label block) (in-dict blocks)])
         (cons label (assign-homes-block block locals-homes))))]))
 

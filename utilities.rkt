@@ -2356,6 +2356,7 @@ Changelog:
 ;; We put the caller-saved registers first.
 (define general-registers (vector 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10
                                   'rbx  'r12 'r13 'r14))
+;(define general-registers (vector 'rbx 'rcx)) ; for test - Zijun Yu
 
 ;; This is the definitive list of all the caller-save and callee-save
 ;; registers.
@@ -2443,8 +2444,11 @@ Changelog:
 (define (color->register c)
   (vector-ref registers-for-alloc c))
 
-(define registers (set-union (list->set (vector->list general-registers))
-			     (set 'rax 'r11 'r15 'rsp 'rbp '__flag)))
+;(define registers (set-union (list->set (vector->list general-registers))
+;			     (set 'rax 'r11 'r15 'rsp 'rbp '__flag)))
+(define registers (set-union (set 'rcx 'rdx 'rsi 'rdi 'r8 'r9 'r10
+                                  'rbx  'r12 'r13 'r14)
+                             reserved-registers))
 
 (define (align n alignment)
   (cond [(eq? 0 (modulo n alignment))

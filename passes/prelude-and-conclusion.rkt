@@ -6,26 +6,37 @@
 (define (prelude-and-conclusion p)
   (match p
     [(X86Program info blocks)
-     (let ([stack-space (dict-ref info 'stack-space)])
-       (X86Program
+     (define used-callee (dict-ref info 'used-callee))
+     (define num-spilled (dict-ref info 'num-spilled))
+     (define stack-space (+ (set-count used-callee) num-spilled))
+     (define rsp-diff (if (even? stack-space)
+                          (* 8 num-spilled)
+                          (* 8 (+ 1 num-spilled))))
+     (X86Program
         info
         (append blocks
-                (list (generate-prelude stack-space)
-                      (generate-conclusion stack-space)))))]))
+                (list (generate-prelude used-callee rsp-diff)
+                      (generate-conclusion used-callee rsp-diff))))]))
 
-(define (generate-prelude stack-space)
+(define (generate-prelude used-callee rsp-diff)
   (cons 'main
         (Block
          '()
-         (list (Instr 'pushq (list (Reg 'rbp)))
-               (Instr 'movq (list (Reg 'rsp) (Reg 'rbp)))
-               (Instr 'subq (list (Imm stack-space) (Reg 'rsp)))
-               (Jmp 'start)))))
+         (append
+          (list (Instr 'pushq (list (Reg 'rbp)))
+                (Instr 'movq (list (Reg 'rsp) (Reg 'rbp))))
+          (for/list ([reg used-callee])
+            (Instr 'pushq (list (Reg reg))))
+          (if (= rsp-diff 0) '() (list (Instr 'subq (list (Imm rsp-diff) (Reg 'rsp)))))
+          (list (Jmp 'start))))))
 
-(define (generate-conclusion stack-space)
+(define (generate-conclusion used-callee rsp-diff)
   (cons 'conclusion
         (Block
          '()
-         (list (Instr 'addq (list (Imm stack-space) (Reg 'rsp)))
-               (Instr 'popq (list (Reg 'rbp)))
-               (Retq)))))
+         (append
+          (if (= rsp-diff 0) '() (list (Instr 'addq (list (Imm rsp-diff) (Reg 'rsp)))))
+          (reverse (for/list ([reg used-callee])
+                     (Instr 'popq (list (Reg reg)))))
+          (list (Instr 'popq (list (Reg 'rbp)))
+                (Retq))))))

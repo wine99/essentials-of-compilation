@@ -28,7 +28,7 @@
 (define (assign-homes-block block locals-homes)
   (match block
     [(Block info instrs)
-     (Block info
+     (Block '()
             (for/list ([instr instrs])
               (assign-homes-instr instr locals-homes)))]))
 
