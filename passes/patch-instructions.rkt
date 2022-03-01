@@ -19,6 +19,12 @@
       (append-map
        (lambda (instr)
          (match instr
+           [(Instr 'movq (list (Deref reg1 off1) (Deref reg2 off2)))
+            #:when (and (eq? reg1 reg2) (eq? off1 off2))
+            '()]
+           [(Instr 'movq (list (Reg reg1) (Reg reg2)))
+            #:when (eq? reg1 reg2)
+            '()]
            [(Instr op (list (Deref reg1 off1) (Deref reg2 off2)))
             (list (Instr 'movq (list (Deref reg1 off1) (Reg 'rax)))
                   (Instr op (list (Reg 'rax) (Deref reg2 off2))))]
