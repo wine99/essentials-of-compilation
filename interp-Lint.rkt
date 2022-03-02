@@ -55,6 +55,10 @@
          (define v1 ((interp-exp env) e1))
          (define v2 ((interp-exp env) e2))
          (fx+ v1 v2)]
+        [(Prim '- (list e1 e2))
+         (define v1 ((interp-exp env) e1))
+         (define v2 ((interp-exp env) e2))
+         (fx- v1 v2)]
         ))
 
     (define/public (interp-program p)

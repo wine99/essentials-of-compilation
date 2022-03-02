@@ -23,7 +23,7 @@
   `(("uniquify" ,uniquify ,interp-Lvar)
     ("remove complex opera*" ,remove-complex-opera* ,interp-Lvar)
     ("explicate control" ,explicate-control ,interp-Cvar)
-    ("instruction selection" ,select-instructions ,interp-pseudo-x86-0)
+    ("select instruction" ,select-instructions ,interp-pseudo-x86-0)
     ("uncover live" ,uncover-live ,interp-pseudo-x86-0)
     ("build interference" ,build-interference ,interp-pseudo-x86-0)
     ("allocate registers" ,allocate-registers ,interp-x86-0)
