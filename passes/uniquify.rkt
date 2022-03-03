@@ -7,21 +7,18 @@
   (match p
     [(Program info e) (Program info ((uniquify-exp '()) e))]))
 
-(define (uniquify-exp env)
-  (lambda (e)
+(define ((uniquify-exp env) e)
+  (define recur (uniquify-exp env))
     (match e
-      [(Var x)
-       (let ([p (assoc x env)])
-         (if (and p (eq? (car p) x))
-             (Var (cdr p))
-             ;; TODO maybe check somewhere else
-             (error 'syntax-error "unbound identifier " x)))]
-      ;; TODO 重新构造 (Int n) 更高效还是直接返回 e ?
-      [(Int n) (Int n)]
+      [(Int n) e]
+      [(Bool b) e]
+      [(Var x) (Var (dict-ref env x))]
       [(Let x e body)
        (let ([new-x (gensym)])
          (Let new-x
-              ((uniquify-exp env) e)
-              ((uniquify-exp (cons (cons x new-x) env)) body)))]
+              (recur e)
+              ((uniquify-exp (dict-set env x new-x)) body)))]
       [(Prim op es)
-       (Prim op (for/list ([e es]) ((uniquify-exp env) e)))])))
+       (Prim op (for/list ([e es]) (recur e)))]
+      [(If e1 e2 e3)
+       (If (recur e1) (recur e2) (recur e3))]))
