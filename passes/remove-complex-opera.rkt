@@ -7,14 +7,22 @@
   (match p
     [(Program info e) (Program info (rco-exp e))]))
 
+; Apply rco-atom to subexpressions that need to be atomic,
+; apply rco-exp to these that do not.
+
+; rco-atom returns an atmoic expression and
+; a alist mapping temporary variables to complex subexpressions
+
 (define (rco-atom e)
   (match e
-    [(Var x) (values (Var x) '())]
-    [(Int n) (values (Int n) '())]
+    [(or (Int x) (Var x) (Bool x)) (values e '())]
     [(Let x rhs body)
      (define rcoed-rhs (rco-exp rhs))
      (define-values (rcoed-body pairs) (rco-atom body))
      (values rcoed-body (cons `(,x . ,rcoed-rhs) pairs))]
+    [(If e1 e2 e3)
+     (define tmp (gensym))
+     (values (Var tmp) `((,tmp . ,(rco-exp e))))]
     [(Prim op es)
      (define-values
        (rcoed-es _pairs)
@@ -25,10 +33,11 @@
 
 (define (rco-exp e)
   (match e
-    [(Var x) (Var x)]
-    [(Int n) (Int n)]
+    [(or (Int x) (Var x) (Bool x)) e]
     [(Let x rhs body)
      (Let x (rco-exp rhs) (rco-exp body))]
+    [(If e1 e2 e3)
+     (If (rco-exp e1) (rco-exp e2) (rco-exp e3))]
     [(Prim op es)
      (define-values
        (rcoed-es _pairs)
