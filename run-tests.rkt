@@ -2,12 +2,12 @@
 #lang racket
 
 (require "utilities.rkt")
-(require "interp-Lvar.rkt")
-(require "interp-Cvar.rkt")
+(require "interp-Lif.rkt")
+(require "type-check-Lif.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
 
-;(debug-level 3)
+;(debug-level 1)
 (AST-output-syntax 'concrete-syntax)
 
 ;; all the files in the tests/ directory with extension ".rkt".
@@ -25,10 +25,10 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
-;(interp-tests "var" #f compiler-passes interp-Lvar "var_test" (tests-for "var"))
-;(interp-tests "var" #f compiler-passes interp-Lvar "var_test" '(14))
+(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "var_test" (tests-for "var"))
+(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "cond_test" (tests-for "cond"))
 
 ;; Uncomment the following when all the passes are complete to
 ;; test the final x86 code.
-(compiler-tests "var" #f compiler-passes "var_test" (tests-for "var"))
+;; (compiler-tests "var" #f compiler-passes "var_test" (tests-for "var"))
 
