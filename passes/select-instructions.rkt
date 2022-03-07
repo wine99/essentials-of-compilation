@@ -23,8 +23,13 @@
 (define (select-instr-atm a)
   (match a
     [(Int i) (Imm i)]
-    [(Var _) a]))
+    [(Bool #t) (Imm 1)]
+    [(Bool #f) (Imm 0)]
+    [(Var x) (Var x)]))
 
+; According to definition, "stmt ::= var = exp;"
+; It is better to not having two vars in a binary operation
+; since they may both be allocated to a stack location
 (define (select-instr-stmt stmt)
   (match stmt
     [(Assign (Var x) e)
@@ -32,18 +37,22 @@
        [(Prim '+ (list (Var x1) a2))
         #:when (equal? x x1)
         (list (Instr 'addq (list (select-instr-atm a2) (Var x))))]
+       [(Prim '+ (list a1 (Var x1)))
+        #:when (equal? x x1)
+        (list (Instr 'addq (list (select-instr-atm a1) (Var x))))]
        [(Prim '+ (list (Int n) a2))
         (list (Instr 'movq (list (select-instr-atm a2) (Var x)))
               (Instr 'addq (list (Imm n) (Var x))))]
        [(Prim '- (list (Var x1) a2))
         #:when (equal? x x1)
         (list (Instr 'subq (list (select-instr-atm a2) (Var x))))]
-       [(Prim '- (list (Int n) (Var y)))
-        (list (Instr 'movq (list (Var y) (Var x)))
-              (Instr 'negq (list (Var x)))
-              (Instr 'addq (list (Imm n) (Var x))))]
+       [(Prim '- (list a1 (Var x1)))
+        #:when (equal? x x1)
+        (list (Instr 'negq (list (Var x)))
+              (Instr 'addq (list (select-instr-atm a1) (Var x))))]
        [_ (select-instr-assign (Var x) e)])]))
 
+; This v can also be (Reg 'rax)
 (define (select-instr-assign v e)
   (match e
     [(Int i)
