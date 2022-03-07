@@ -18,7 +18,15 @@
      (list (Callq 'read_int 0) (Jmp 'conclusion))]
     [(Return e) (append
                  (select-instr-assign (Reg 'rax) e)
-                 (list (Jmp 'conclusion)))]))
+                 (list (Jmp 'conclusion)))]
+    [(Goto label) (list (Jmp label))]
+    [(IfStmt (Prim cmp (list a1  a2))
+             (Goto label1)
+             (Goto label2))
+     #:when (cmp? cmp)
+     (list (Instr 'cmpq (list (select-instr-atm a2) (select-instr-atm a1)))
+           (JmpIf (cmp->suffix cmp) label1)
+           (Jmp label2))]))
 
 (define (select-instr-atm a)
   (match a
@@ -55,9 +63,7 @@
 ; This v can also be (Reg 'rax)
 (define (select-instr-assign v e)
   (match e
-    [(Int i)
-     (list (Instr 'movq (list (select-instr-atm e) v)))]
-    [(Var _)
+    [(or (Int _) (Var _) (Bool _))
      (list (Instr 'movq (list (select-instr-atm e) v)))]
     [(Prim 'read '())
      (list (Callq 'read_int 0)
@@ -70,4 +76,23 @@
            (Instr 'addq (list (select-instr-atm a2) v)))]
     [(Prim '- (list a1 a2))
      (list (Instr 'movq (list (select-instr-atm a1) v))
-           (Instr 'subq (list (select-instr-atm a2) v)))]))
+           (Instr 'subq (list (select-instr-atm a2) v)))]
+
+    [(Prim 'not (list a))
+     (if (equal? v a)
+         (list (Instr 'xorq (Imm 1) v))
+         (list (Instr 'movq (select-instr-atm a) v)
+               (Instr 'xorq (Imm 1) v)))]
+    [(Prim cmp (list a1 a2))
+     #:when (cmp? cmp)
+     (list (Instr 'cmpq (list (select-instr-atm a2) (select-instr-atm a1)))
+           (Instr 'set (list (cmp->suffix cmp) (Reg 'al)))
+           (Instr 'movzbq (list (Reg 'al) v)))]))
+
+(define cmp-suffix #hash((eq? . e)
+                         (< . l)
+                         (<= . le)
+                         (> . g)
+                         (>= . ge)))
+(define (cmp? op) (hash-has-key? cmp-suffix op))
+(define (cmp->suffix op) (hash-ref cmp-suffix op))
