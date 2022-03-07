@@ -12,10 +12,10 @@
 (require "passes/explicate-control.rkt")
 (require "passes/select-instructions.rkt")
 (require "passes/uncover-live.rkt")
-(require "passes/build-interference.rkt")
-(require "passes/allocate-registers.rkt")
-(require "passes/patch-instructions.rkt")
-(require "passes/prelude-and-conclusion.rkt")
+;(require "passes/build-interference.rkt")
+;(require "passes/allocate-registers.rkt")
+;(require "passes/patch-instructions.rkt")
+;(require "passes/prelude-and-conclusion.rkt")
 (provide (all-defined-out))
 
 
@@ -28,6 +28,7 @@
     ("remove complex opera*" ,remove-complex-opera* ,interp-Lif ,type-check-Lif)
     ("explicate control" ,explicate-control ,interp-Cif ,type-check-Cif)
     ("select instruction" ,select-instructions ,interp-pseudo-x86-1)
+    ("uncover live" ,uncover-live ,interp-pseudo-x86-1)
     )
   #;`(("shrink" ,shrink ,interp-Lif ,type-check-Lif)
     ("uniquify" ,uniquify ,interp-Lif ,type-check-Lif)
