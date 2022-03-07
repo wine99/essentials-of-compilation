@@ -86,8 +86,8 @@
     [(Prim cmp (list a1 a2))
      #:when (cmp? cmp)
      (list (Instr 'cmpq (list (select-instr-atm a2) (select-instr-atm a1)))
-           (Instr 'set (list (cmp->suffix cmp) (Reg 'al)))
-           (Instr 'movzbq (list (Reg 'al) v)))]))
+           (Instr 'set (list (cmp->suffix cmp) (ByteReg 'al)))
+           (Instr 'movzbq (list (ByteReg 'al) v)))]))
 
 (define cmp-suffix #hash((eq? . e)
                          (< . l)
