@@ -25,10 +25,11 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
-(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "var_test" (tests-for "var"))
-(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "cond_test" (tests-for "cond"))
+;(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "var_test" (tests-for "var"))
+;(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "cond_test" (tests-for "cond"))
+;(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "cond_test" '(10))
 
 ;; Uncomment the following when all the passes are complete to
 ;; test the final x86 code.
-;; (compiler-tests "var" #f compiler-passes "var_test" (tests-for "var"))
-
+(compiler-tests "cond" type-check-Lif compiler-passes "var_test" (tests-for "var"))
+(compiler-tests "cond" type-check-Lif compiler-passes "cond_test" (tests-for "cond"))
