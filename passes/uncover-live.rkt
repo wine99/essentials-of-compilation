@@ -20,7 +20,9 @@
      
      (X86Program
       (dict-set info 'label->live label->live)
-      (hash->list new-blocks))]))
+      ; keep the original order of the blocks
+      (for/list ([(label _) (in-dict blocks)])
+        (cons label (hash-ref new-blocks label))))]))
 
 (define (blocks->graph blocks)
   (define G (directed-graph '()))

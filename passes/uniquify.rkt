@@ -14,7 +14,7 @@
       [(Bool b) e]
       [(Var x) (Var (dict-ref env x))]
       [(Let x e body)
-       (let ([new-x (gensym)])
+       (let ([new-x (gensym x)])
          (Let new-x
               (recur e)
               ((uniquify-exp (dict-set env x new-x)) body)))]
