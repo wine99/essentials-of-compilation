@@ -2,8 +2,8 @@
 #lang racket
 
 (require "utilities.rkt")
-(require "interp-Lif.rkt")
-(require "type-check-Lif.rkt")
+(require "interp-Lwhile.rkt")
+(require "type-check-Lwhile.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
 
@@ -25,11 +25,12 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
-;(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "var_test" (tests-for "var"))
-;(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "cond_test" (tests-for "cond"))
-;(interp-tests "cond" type-check-Lif compiler-passes interp-Lif "cond_test" '(10))
+(interp-tests "while" type-check-Lwhile compiler-passes interp-Lwhile "var_test" (tests-for "var"))
+(interp-tests "while" type-check-Lwhile compiler-passes interp-Lwhile "cond_test" (tests-for "cond"))
+(interp-tests "while" type-check-Lwhile compiler-passes interp-Lwhile "while_test" (tests-for "while"))
 
 ;; Uncomment the following when all the passes are complete to
 ;; test the final x86 code.
-(compiler-tests "cond" type-check-Lif compiler-passes "var_test" (tests-for "var"))
-(compiler-tests "cond" type-check-Lif compiler-passes "cond_test" (tests-for "cond"))
+;(compiler-tests "while" type-check-Lwhile compiler-passes "var_test" (tests-for "var"))
+;(compiler-tests "while" type-check-Lwhile compiler-passes "cond_test" (tests-for "cond"))
+;(compiler-tests "while" type-check-Lwhile compiler-passes "while_test" (tests-for "while"))

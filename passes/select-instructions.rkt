@@ -12,7 +12,7 @@
 
 (define (select-instr-tail t)
   (match t
-    [(Seq stmt t*) 
+    [(Seq stmt t*)
      (append (select-instr-stmt stmt) (select-instr-tail t*))]
     [(Return (Prim 'read '()))
      (list (Callq 'read_int 0) (Jmp 'conclusion))]
@@ -33,7 +33,8 @@
     [(Int i) (Imm i)]
     [(Bool #t) (Imm 1)]
     [(Bool #f) (Imm 0)]
-    [(Var x) (Var x)]))
+    [(Var x) (Var x)]
+    [(Void) (Imm 0)]))
 
 ; According to definition, "stmt ::= var = exp;"
 ; It is better to not having two vars in a binary operation
@@ -58,7 +59,8 @@
         #:when (equal? x x1)
         (list (Instr 'negq (list (Var x)))
               (Instr 'addq (list (select-instr-atm a1) (Var x))))]
-       [_ (select-instr-assign (Var x) e)])]))
+       [_ (select-instr-assign (Var x) e)])]
+    [(Prim 'read '()) (list (Callq 'read_int 0))]))
 
 ; This v can also be (Reg 'rax)
 (define (select-instr-assign v e)
