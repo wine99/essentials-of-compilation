@@ -1,0 +1,5 @@
+(let ([x0 10])
+  (let ([y1 0])
+    (+ (+ (begin (set! y1 (read)) x0)
+          (begin (set! x0 (read)) y1))
+       x0)))
