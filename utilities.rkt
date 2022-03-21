@@ -1430,11 +1430,19 @@ Changelog:
 
 (struct ByteReg (name) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
-  [(define (write-proc reg port mode)
-     (match reg
-       [(ByteReg r)
-        (write-string "%" port)
-        (write r port)]))])
+  [(define write-proc
+     (let ([csp (make-constructor-style-printer
+                 (lambda (obj) 'ByteReg)
+                 (lambda (obj) (list (ByteReg-name obj))))])
+       (lambda (ast port mode)
+         (cond [(eq? (AST-output-syntax) 'concrete-syntax)
+                (match ast
+                  [(ByteReg r)
+                   (write-string "%" port)
+                   (write r port)])]
+               [(eq? (AST-output-syntax) 'abstract-syntax)
+                (csp ast port mode)]
+               ))))])
 
 (struct JmpIf (cnd target) #:transparent #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write

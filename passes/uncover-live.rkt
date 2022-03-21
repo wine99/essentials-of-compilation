@@ -1,5 +1,6 @@
 #lang racket
 (require graph)
+(require data/queue)
 (require "../utilities.rkt")
 (provide uncover-live vars-read vars-written arg->set)
 
@@ -8,20 +9,33 @@
     [(X86Program info blocks)
      (define G (blocks->graph blocks))
      (define new-blocks (make-hash))
+
+     ; live-before set of each label/block
      (define label->live (make-hash))
      (hash-set! label->live 'conclusion (set 'rax 'rsp))
-     
-     (for ([label (tsort (transpose G))])
-       (define block (dict-ref blocks label))
-       (define-values (new-block live-before)
-         (uncover-live-block block label->live))
+     (for ([label (in-dict-keys blocks)])
+       (hash-set! label->live label (set)))
+
+     (define worklist (make-queue))
+     (define trans-G (transpose G))
+     (for ([label (tsort trans-G)])
+       (enqueue! worklist label))
+     (while (not (queue-empty? worklist))
+       (define label (dequeue! worklist))
+       (define-values (new-block new-live-before)
+         (uncover-live-block (dict-ref blocks label) label->live))
        (hash-set! new-blocks label new-block)
-       (hash-set! label->live label live-before))
-     
+       (unless (equal? new-live-before (hash-ref label->live label))
+         (debug (format "live-before of ~a: ~a\n" label new-live-before))
+         (hash-set! label->live label new-live-before)
+         (for ([label^ (in-neighbors trans-G label)])
+           (debug (format "enqueue ~a\n" label^))
+           (enqueue! worklist label^))))
+
      (X86Program
       (dict-set info 'label->live label->live)
       ; keep the original order of the blocks
-      (for/list ([(label _) (in-dict blocks)])
+      (for/list ([label (in-dict-keys blocks)])
         (cons label (hash-ref new-blocks label))))]))
 
 (define (blocks->graph blocks)

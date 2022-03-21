@@ -2,6 +2,7 @@
 (require graph)
 (require "../utilities.rkt")
 (require "uncover-live.rkt")
+(require "../graph-printing.rkt")
 (provide build-interference)
 
 (define (build-interference p)
@@ -20,7 +21,7 @@
        (match block
          [(Block info instrs)
           (build-interf instrs (dict-ref info 'live-afters) interf)]))
-     ; (verbose (graphviz interf))
+     ; (print-dot interf "interf.txt")
      (X86Program (dict-set info 'conflicts interf) blocks)]))
 
 (define (build-interf instrs live-afters interf)
@@ -33,8 +34,7 @@
                #:when (not (or (equal? (Var v) s) (equal? v d))))
            (verbose (format "~a -- ~a\n" v d))
            (add-edge! interf v d)))]
-      [(Instr 'movzbq (list s d))
-       ; s是ByteReg
+      [(Instr 'movzbq (list (ByteReg s) d))
        (for ([v live-after])
          (for ([d (arg->set d)]
                #:when (not (equal? (byte-reg->full-reg s) d)))

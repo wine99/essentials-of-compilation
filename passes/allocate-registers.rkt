@@ -26,7 +26,7 @@
      (define locals-homes
        (for/hash ([var vars])
          (define home (color->home (hash-ref vars-colors var) num-r-f-a num-u-c-r))
-         (verbose (format "home of ~a is ~a" var home))
+         (verbose (format "home of ~a is ~a\n" var home))
          (values var home)))
      (X86Program
       ; (dict-set (dict-set info 'used-callee u-c-r)
@@ -50,7 +50,7 @@
   (define vars-nodes (make-hash))
   ; map var to color
   (define vars-colors (make-hash))
-  
+
   (for ([var vars])
     (define adj-regs
       (for/list ([location (in-neighbors interf var)]
@@ -64,7 +64,7 @@
     (define color (choose-color var (hash-ref unavail-colors var)))
     (cond [(> color largest-color)
            (set! largest-color color)])
-    (verbose (format "color ~a to ~a" var color))
+    (verbose (format "color ~a to ~a\n" var color))
     (hash-set! vars-colors var color)
     (for ([neighbor (in-neighbors interf var)]
           #:when (not (set-member? registers neighbor)))
