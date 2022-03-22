@@ -20,13 +20,20 @@
                  (select-instr-assign (Reg 'rax) e)
                  (list (Jmp 'conclusion)))]
     [(Goto label) (list (Jmp label))]
-    [(IfStmt (Prim cmp (list a1  a2))
+    [(IfStmt (Prim cmp (list a1 a2))
              (Goto label1)
              (Goto label2))
      #:when (cmp? cmp)
      (list (Instr 'cmpq (list (select-instr-atm a2) (select-instr-atm a1)))
            (JmpIf (cmp->suffix cmp) label1)
-           (Jmp label2))]))
+           (Jmp label2))]
+    [(IfStmt (Prim 'vector-ref args)
+             (Goto label1)
+             (Goto label2))
+     (append (select-instr-assign (Reg 'rax) (Prim 'vector-ref args))
+             (list (Instr 'cmpq (list (Reg 'rax) (Imm 1)))
+                   (JmpIf 'e label1)
+                   (Jmp label2)))]))
 
 (define (select-instr-atm a)
   (match a
@@ -60,7 +67,14 @@
         (list (Instr 'negq (list (Var x)))
               (Instr 'addq (list (select-instr-atm a1) (Var x))))]
        [_ (select-instr-assign (Var x) e)])]
-    [(Prim 'read '()) (list (Callq 'read_int 0))]))
+    
+    [(Prim 'read '()) (list (Callq 'read_int 0))]
+    [(Prim 'vector-set! (list vec (Int n) rhs))
+     (list (Instr 'movq (list (select-instr-atm vec) (Reg 'r11)))
+           (Instr 'movq (list (select-instr-atm rhs) (Deref 'r11 (* 8 (add1 n))))))]
+    [(Collect bytes)
+     (list (Instr 'movq (list (Reg 'r15) (Reg 'rdi)))
+           (Instr 'movq (list (Imm bytes) (Reg 'rsi))))]))
 
 ; This v can also be (Reg 'rax)
 (define (select-instr-assign v e)
@@ -89,7 +103,28 @@
      #:when (cmp? cmp)
      (list (Instr 'cmpq (list (select-instr-atm a2) (select-instr-atm a1)))
            (Instr 'set (list (cmp->suffix cmp) (ByteReg 'al)))
-           (Instr 'movzbq (list (ByteReg 'al) v)))]))
+           (Instr 'movzbq (list (ByteReg 'al) v)))]
+
+    [(Prim 'vector-length (list vec))
+     (list (Instr 'movq (list (select-instr-atm vec) (Reg 'r11))) 
+           (Instr 'movq (list (Deref 'r11 0) (Reg 'rax)))
+           (Instr 'sarq (list (Imm 1) (Reg 'rax)))
+           (Instr 'andq (list (Imm 63) (Reg 'rax)))
+           (Instr 'movq (list (Reg 'rax) v)))]
+    [(Prim 'vector-ref (list vec (Int n)))
+     (list (Instr 'movq (list (select-instr-atm vec) (Reg 'r11))) 
+           (Instr 'movq (list (Deref 'r11 (* 8 (add1 n))) v)))]
+    [(Prim 'vector-set! (list vec (Int n) rhs))
+     (list (Instr 'movq (list (select-instr-atm vec) (Reg 'r11)))
+           (Instr 'movq (list (select-instr-atm rhs) (Deref 'r11 (* 8 (add1 n)))))
+           (Instr 'movq (list (Imm 0) v)))]
+    [(GlobalValue x) (list (Instr 'movq (list (Global x) v)))]
+    [(Allocate len types)
+     (define tag (calculate-tag (cdr types) len))
+     (list (Instr 'movq (list (Global 'free_ptr) (Reg 'r11)))
+           (Instr 'addq (list (Imm (* 8 (add1 len))) (Global 'free_ptr)))
+           (Instr 'movq (list (Imm tag) (Deref 'r11 0)))
+           (Instr 'movq (list (Reg 'r11) v)))]))
 
 (define cmp-suffix #hash((eq? . e)
                          (< . l)
@@ -98,3 +133,23 @@
                          (>= . ge)))
 (define (cmp? op) (hash-has-key? cmp-suffix op))
 (define (cmp->suffix op) (hash-ref cmp-suffix op))
+
+(define (calculate-tag types len)
+  ;;highest 7 bits are unused
+  ;;lowest 1 bit is 0 saying this is not a forwarding pointer
+  (define is-not-forward-tag 1)
+  ;;next 6 lowest bits are the length
+  (define length-tag (arithmetic-shift len 1))
+  ;;bits [6,56] are a bitmask indicating if [0,50] are pointers
+  (define ptr-tag
+    (for/fold ([tag 0]) ([t (in-list types)] [i (in-naturals 7)])
+      (if (root-type? t)
+          tag
+          (bitwise-ior tag (arithmetic-shift 1 i)))))
+  ;;combine the tags into a single quad word
+  (bitwise-ior ptr-tag length-tag is-not-forward-tag))
+
+(define (root-type? t)
+  (match t
+    [`(Vector ,T ...) #t]
+    [else #f]))

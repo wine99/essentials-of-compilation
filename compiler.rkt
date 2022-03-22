@@ -32,7 +32,7 @@
     ("uncover get!" ,uncover-get! ,interp-Lvec-prime #;,type-check-Lvec)
     ("remove complex opera*" ,remove-complex-opera* ,interp-Lvec-prime #;,type-check-Lvec)
     ("explicate control" ,explicate-control ,interp-Cvec #;,type-check-Cvec)
-    ;("select instruction" ,select-instructions ,interp-pseudo-x86-1)
+    ("select instruction" ,select-instructions ,interp-pseudo-x86-2)
     ;("uncover live" ,uncover-live ,interp-pseudo-x86-1)
     ;("build interference" ,build-interference ,interp-pseudo-x86-1)
     ;("allocate registers" ,allocate-registers ,interp-x86-1)
