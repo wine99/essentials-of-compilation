@@ -17,6 +17,9 @@
   (define tmp (gensym 'tmp))
   (match e
     [(or (Int _) (Var _) (Bool _) (Void)) (values e '())]
+    [(or (Collect _) (Allocate _ _) (GlobalValue _))
+     (define tmp (gensym 'tmp))
+     (values (Var tmp) `((,tmp . ,e)))]
     [(Let x rhs body)
      (define rcoed-rhs (rco-exp rhs))
      (define-values (rcoed-body pairs) (rco-atom body))
@@ -32,7 +35,9 @@
 
 (define (rco-exp e)
   (match e
-    [(or (Int _) (Var _) (Bool _) (Void)) e]
+    [(or (Int _) (Var _) (Bool _) (Void)
+         (Collect _) (Allocate _ _) (GlobalValue _))
+     e]
     [(GetBang x) (Var x)]
     [(Let x rhs body)
      (Let x (rco-exp rhs) (rco-exp body))]
@@ -49,11 +54,3 @@
      (Begin (for/list ([e es]) (rco-exp e)) (rco-exp final-e))]
     [(WhileLoop cnd body)
      (WhileLoop (rco-exp cnd) (rco-exp body))]))
-
-;; make-lets is defined in utilities
-;; TODO read code of make-lets in utilities
-;(define (make-lets pairs final-exp)
-;  (match pairs
-;    ['() final-exp]
-;    [`((,symbol . ,exp) rest)
-;     (Let symbol exp (make-lets rest final-exp))]))

@@ -25,4 +25,5 @@
      (SetBang (dict-ref env x) (recur e))]
     [(Begin es final-e)
      (Begin (for/list ([e es]) (recur e)) (recur final-e))]
-    [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]))
+    [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
+    [(HasType e type) (HasType (recur e) type)]))

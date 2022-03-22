@@ -8,7 +8,7 @@
 
 (define (shrink-exp e)
   (match e
-    [(or (Int _) (Var _) (Bool _) (Void)) e]
+    [(or (Int _) (Var _) (Bool _)) e]
     [(Let x rhs body) (Let x (shrink-exp rhs) (shrink-exp body))]
     [(If e1 e2 e3) (If (shrink-exp e1) (shrink-exp e2) (shrink-exp e3))]
     [(Prim 'and (list e1 e2))
@@ -23,4 +23,5 @@
     [(SetBang x e) (SetBang x (shrink-exp e))]
     [(Begin es final-e)
      (Begin (for/list ([e es]) (shrink-exp e)) (shrink-exp final-e))]
-    [(WhileLoop cnd body) (WhileLoop (shrink-exp cnd) (shrink-exp body))]))
+    [(WhileLoop cnd body) (WhileLoop (shrink-exp cnd) (shrink-exp body))]
+    [(HasType e type) (HasType (shrink-exp e) type)]))

@@ -1,0 +1,58 @@
+#lang racket
+(require "../utilities.rkt")
+(provide expose-allocation)
+
+(define (expose-allocation p)
+  (match p
+    [(Program info e) (Program info (expose-exp e))]))
+
+; After expose-allocation, the wrapping HasType is not needed anymore.
+
+(define (expose-exp e)
+  (match e
+    [(HasType (Prim 'vector es) type)
+     (define v (gensym 'vector))
+     (define len (length es))
+     (define vars (for/list ([_ (in-range len)]) (gensym 'tmp)))
+     (define exposed-es (for/list ([e es]) (expose-exp e)))
+     (define alloc-and-init
+       (make-alloc-and-init v len type vars exposed-es))
+     (expose vars exposed-es alloc-and-init)]
+    [(Let x e body)
+     (Let x (expose-exp e) (expose-exp body))]
+    [(If e1 e2 e3)
+     (If (expose-exp e1) (expose-exp e2) (expose-exp e3))]
+    [(Prim op es)
+     (Prim op (for/list ([e es]) (expose-exp e)))]
+    [(SetBang x rhs) (SetBang x (expose-exp rhs))]
+    [(Begin es final-e)
+     (Begin (for/list ([e es]) (expose-exp e)) (expose-exp final-e))]
+    [(WhileLoop cnd body)
+     (WhileLoop (expose-exp cnd) (expose-exp body))]
+    [(or (Int _) (Var _) (Bool _)) e]))
+
+(define (expose vars exposed-es alloc-and-init)
+  (match exposed-es
+    ['() alloc-and-init]
+    [`(,e . ,rest-es)
+     #:when (atm? e)
+     (expose (cdr vars) rest-es alloc-and-init)]
+    [`(,e . ,rest-es)
+     (Let (car vars) e
+          (expose (cdr vars) rest-es alloc-and-init))]))
+
+(define (make-alloc-and-init vec-sym len vec-type vars exposed-es)
+  (Begin
+    (list (If (Prim '< (list (Prim '+ (list (GlobalValue 'free_ptr)
+                                            (Int (* 8 (add1 len)))))
+                             (GlobalValue 'fromspace_end)))
+              (Void)
+              (Collect (* 8 (add1 len)))))
+    (Let vec-sym (Allocate len vec-type)
+         (Begin (for/list ([i (in-naturals)] [e exposed-es] [v vars])
+                  (Prim 'vector-set! (list (Var vec-sym)
+                                           (Int i)
+                                           (if (atm? e)
+                                               e
+                                               (Var v)))))
+                (Var vec-sym)))))

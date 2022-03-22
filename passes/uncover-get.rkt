@@ -25,7 +25,8 @@
      (apply set-union
             (for/list ([e (append es (list final-e))]) (collect-set! e)))]
     [(WhileLoop cnd body)
-     (set-union (collect-set! cnd) (collect-set! body))]))
+     (set-union (collect-set! cnd) (collect-set! body))]
+    [(or (Collect _) (Allocate _ _) (GlobalValue _)) (set)]))
 
 (define ((uncover-get!-exp set!-vars) e)
   (define recur (uncover-get!-exp set!-vars))
@@ -40,4 +41,5 @@
     [(If e1 e2 e3) (If (recur e1) (recur e2) (recur e3))]
     [(SetBang x e) (SetBang x (recur e))]
     [(Begin es final-e) (Begin (for/list ([e es]) (recur e)) (recur final-e))]
-    [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]))
+    [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
+    [(or (Collect _) (Allocate _ _) (GlobalValue _)) e]))

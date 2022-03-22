@@ -28,6 +28,7 @@
         [(HasType e t) (recur e)]
         [(Allocate size ty) (set)]
         [(GlobalValue name) (set)]
+        [(Collect size) (set)]
         [else (super free-vars-exp e)]))
         
     (define/override (type-check-exp env)

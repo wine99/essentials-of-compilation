@@ -1,6 +1,6 @@
 #lang racket
 (require "../utilities.rkt")
-(require "../type-check-Cif.rkt")
+(require "../type-check-Cvec.rkt")
 (provide explicate-control)
 
 ;; explicate-control : R1 -> C0
@@ -8,7 +8,7 @@
   (match p
     [(Program info e)
      (define-values (start-block blocks) (explicate-tail e '()))
-     (type-check-Cif (CProgram info (cons (cons 'start start-block) blocks)))]))
+     (type-check-Cvec (CProgram info (cons (cons 'start start-block) blocks)))]))
 
 ; e is in tail position
 (define (explicate-tail e blocks)
@@ -38,6 +38,7 @@
 ; e is in assignment position
 (define (explicate-assign e x cont blocks)
   (match e
+    #;[(HasType e1 type) (explicate-assign e1 x cont blocks)]
     [(Let y rhs body)
      (define-values (cont^ blocks^) (explicate-assign body x cont blocks))
      (explicate-assign rhs y cont^ blocks^)]
@@ -94,9 +95,11 @@
 ; e is in side-effect position
 (define (explicate-effect e cont blocks)
   (match e
-    [(or (Int _) (Var _) (Bool _) (Void))
+    [(or (Int _) (Var _) (Bool _) (Void) (GlobalValue _))
      (values cont blocks)]
-    [(Prim 'read _) (values (Seq e cont) blocks)]
+    [(or (Collect _) (Allocate _ _)
+         (Prim 'read _) (Prim 'vector-set! _))
+     (values (Seq e cont) blocks)]
     [(Prim _ _) (values cont blocks)]
     [(Let x rhs body)
      (define-values (cont^ blocks^) (explicate-effect body cont blocks))

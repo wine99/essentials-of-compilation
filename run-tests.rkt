@@ -2,8 +2,8 @@
 #lang racket
 
 (require "utilities.rkt")
-(require "interp-Lwhile.rkt")
-(require "type-check-Lwhile.rkt")
+(require "interp-Lvec.rkt")
+(require "type-check-Lvec.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
 
@@ -25,12 +25,16 @@
           (string=? r (car (string-split p "_"))))
         all-tests)))
 
-(interp-tests "while" type-check-Lwhile compiler-passes interp-Lwhile "var_test" (tests-for "var"))
-(interp-tests "while" type-check-Lwhile compiler-passes interp-Lwhile "cond_test" (tests-for "cond"))
-(interp-tests "while" type-check-Lwhile compiler-passes interp-Lwhile "while_test" (tests-for "while"))
+
+(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "var_test" (tests-for "var"))
+(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "cond_test" (tests-for "cond"))
+(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "while_test" (tests-for "while"))
+(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "vectors_test" (tests-for "vectors"))
+
 
 ;; Uncomment the following when all the passes are complete to
 ;; test the final x86 code.
-;(compiler-tests "while" type-check-Lwhile compiler-passes "var_test" (tests-for "var"))
-;(compiler-tests "while" type-check-Lwhile compiler-passes "cond_test" (tests-for "cond"))
-;(compiler-tests "while" type-check-Lwhile compiler-passes "while_test" (tests-for "while"))
+;(compiler-tests "vector" type-check-Lvec compiler-passes "var_test" (tests-for "var"))
+;(compiler-tests "vector" type-check-Lvec compiler-passes "cond_test" (tests-for "cond"))
+;(compiler-tests "vector" type-check-Lvec compiler-passes "while_test" (tests-for "while"))
+;(compiler-tests "vector" type-check-Lvec compiler-passes "vectors_test" (tests-for "vectors"))
