@@ -144,8 +144,8 @@
   (define ptr-tag
     (for/fold ([tag 0]) ([t (in-list types)] [i (in-naturals 7)])
       (if (root-type? t)
-          tag
-          (bitwise-ior tag (arithmetic-shift 1 i)))))
+          (bitwise-ior tag (arithmetic-shift 1 i))
+          tag)))
   ;;combine the tags into a single quad word
   (bitwise-ior ptr-tag length-tag is-not-forward-tag))
 
