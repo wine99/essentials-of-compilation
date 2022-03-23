@@ -74,7 +74,8 @@
            (Instr 'movq (list (select-instr-atm rhs) (Deref 'r11 (* 8 (add1 n))))))]
     [(Collect bytes)
      (list (Instr 'movq (list (Reg 'r15) (Reg 'rdi)))
-           (Instr 'movq (list (Imm bytes) (Reg 'rsi))))]))
+           (Instr 'movq (list (Imm bytes) (Reg 'rsi)))
+           (Callq 'collect 2))]))
 
 ; This v can also be (Reg 'rax)
 (define (select-instr-assign v e)
