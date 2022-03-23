@@ -105,9 +105,10 @@
      (define-values (cont^ blocks^) (explicate-effect body cont blocks))
      (explicate-assign rhs x cont^ blocks^)]
     [(If e1 e2 e3)
-     (define-values (els-block blocks^) (explicate-effect e3 cont blocks))
-     (define-values (thn-block blocks^^) (explicate-effect e2 cont blocks^))
-     (explicate-pred e1 thn-block els-block blocks^^)]
+     (define-values (cont^ blocks^) (wrap-with-goto cont blocks))
+     (define-values (els-block blocks^^) (explicate-effect e3 cont^ blocks^))
+     (define-values (thn-block blocks^^^) (explicate-effect e2 cont^ blocks^^))
+     (explicate-pred e1 thn-block els-block blocks^^^)]
     [(SetBang x rhs)
      (explicate-assign rhs x cont blocks)]
     [(Begin (list e1) final-e)
