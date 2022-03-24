@@ -71,6 +71,7 @@ Changelog:
          make-lets dict-set-all dict-remove-all goto-label get-basic-blocks 
          symbol-append any-tag parse-program vector->set atm? fst
          print-x86 print-x86-class
+         root-type?
          
          (contract-out [struct Prim ((op symbol?) (arg* exp-list?))])
          (contract-out [struct Var ((name symbol?))])
@@ -2514,3 +2515,7 @@ Changelog:
     [else (error "in any-tag, unrecognized type" ty)]
     ))
 
+(define (root-type? t)
+  (match t
+    [`(Vector ,T ...) #t]
+    [else #f]))

@@ -149,8 +149,3 @@
           tag)))
   ;;combine the tags into a single quad word
   (bitwise-ior ptr-tag length-tag is-not-forward-tag))
-
-(define (root-type? t)
-  (match t
-    [`(Vector ,T ...) #t]
-    [else #f]))

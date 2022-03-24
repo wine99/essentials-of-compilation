@@ -124,4 +124,5 @@
     [(Var x) (set x)]
     [(Reg reg) (set reg)]
     [(ByteReg reg) (set (byte-reg->full-reg reg))]
-    [(Deref reg int) (set reg)]))
+    [(Deref reg int) (set reg)]
+    [(Global _) (set)]))

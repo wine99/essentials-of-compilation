@@ -20,15 +20,15 @@
      (for ([(label block) (in-dict blocks)])
        (match block
          [(Block info instrs)
-          (build-interf instrs (dict-ref info 'live-afters) interf)]))
+          (build-interf instrs (dict-ref info 'live-afters) locals-types interf)]))
      ; (print-dot interf "interf.txt")
      (X86Program (dict-set info 'conflicts interf) blocks)]))
 
-(define (build-interf instrs live-afters interf)
+(define (build-interf instrs live-afters locals-types interf)
   (for ([instr instrs] [live-after live-afters])
     (match instr
       [(Instr 'movq (list s d))
-       ; d可能是Var可能是rax，s只能是Var或者Imm
+       ; d might be Var or rax, s can only be Var or Imm
        (for ([v live-after])
          (for ([d (arg->set d)]
                #:when (not (or (equal? (Var v) s) (equal? v d))))
@@ -40,6 +40,19 @@
                #:when (not (equal? (byte-reg->full-reg s) d)))
            (verbose (format "~a -- ~a\n" v d))
            (add-edge! interf v d)))]
+      [(Callq 'collect _)
+       (for ([v live-after])
+         (if (root-type? (dict-ref locals-types v #f))
+             (begin
+               (for ([d registers-for-alloc])
+                 (add-edge! interf v d))
+               (for ([d live-after]
+                     #:when (not (root-type? (dict-ref locals-types d #f))))
+                 ; Vars that will be put on the root stack should not have
+                 ; same color as vars that are going the regular stack
+                 (add-edge! interf v d)))
+             (for ([d caller-save])
+               (add-edge! interf v d))))]
       [_
        (for ([v live-after])
          (for ([d (vars-written instr)]

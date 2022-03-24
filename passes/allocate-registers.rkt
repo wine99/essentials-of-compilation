@@ -5,10 +5,6 @@
 (require "assign-homes.rkt")
 (provide allocate-registers)
 
-; Alternative：对于callq，在build interference时，不做额外的连线
-; 在callq前push已经用到的caller-save，callq后pop，
-; 如果push了奇数个，还要再把rsp减8
-
 (define (allocate-registers p)
   (match p
     [(X86Program info blocks)
@@ -16,22 +12,25 @@
        (for/list ([(var type) (in-dict (dict-ref info 'locals-types))]) var))
      (define interf (dict-ref info 'conflicts))
 
-     (define-values (vars-colors largest-color) (color-graph interf vars))
-     (define u-c-r (used-callee-regs vars-colors))
-     (define num-u-c-r (set-count u-c-r))
-     (define num-r-f-a (num-registers-for-alloc))
-     (define num-spilled (let ([tmp (- (+ largest-color 1) num-r-f-a)])
-                           (if (< tmp 0) 0 tmp)))
+     (define-values (_vars-colors largest-color) (color-graph interf vars))
+     (define-values (vars-colors num-spilled num-root-spills)
+       (recolor _vars-colors (dict-ref info 'locals-types) largest-color))
+     (define used-callee (used-callee-regs vars-colors))
 
      (define locals-homes
        (for/hash ([var vars])
-         (define home (color->home (hash-ref vars-colors var) num-r-f-a num-u-c-r))
+         (define home (color->home (hash-ref vars-colors var)
+                                   (num-registers-for-alloc)
+                                   (set-count used-callee)
+                                   num-root-spills))
          (verbose (format "home of ~a is ~a\n" var home))
          (values var home)))
      (X86Program
       ; (dict-set (dict-set info 'used-callee u-c-r)
       ;           'stack-space (+ num-spilled num-u-c-r))
-      `((used-callee . ,u-c-r) (num-spilled . ,num-spilled))
+      `((used-callee . ,used-callee)
+        (num-spilled . ,num-spilled)
+        (num-root-spills . ,num-root-spills))
       (for/list ([(label block) (in-dict blocks)])
         (cons label (assign-homes-block block locals-homes))))]))
 
@@ -76,6 +75,40 @@
   (values vars-colors largest-color))
 
 
+; Collect colors of spilled root type vars and
+; compact those vars to a continuous sequence of smaller colors
+(define (recolor vars-colors vars-types largest-color)
+  (define smallest-spilled-color (num-registers-for-alloc))
+  (when (largest-color . < . smallest-spilled-color)
+    (values vars-colors 0 0))
+
+  (define spilled-colors (range smallest-spilled-color (+ largest-color 1)))
+  (define spilled-root-colors
+    (for/set ([(var color) (in-dict vars-colors)]
+              #:when (and (color . >= . smallest-spilled-color)
+                          (root-type? (dict-ref vars-types var))))
+      color))
+  (define spilled-not-root-colors
+    (for/list ([color spilled-colors]
+               #:when (not (set-member? spilled-root-colors color)))
+      color))
+
+  (define mapping
+    (for/hash ([color spilled-colors]
+               [new-color (append (set->list spilled-root-colors)
+                                  spilled-not-root-colors)])
+      (values color new-color)))
+
+  (define new-vars-colors
+    (for/hash ([(var color) (in-dict vars-colors)])
+      (if (color . >= . smallest-spilled-color)
+          (values var (hash-ref mapping color))
+          (values var color))))
+  (define num-spilled (length spilled-not-root-colors))
+  (define num-root-spills (set-count spilled-root-colors))
+  (values new-vars-colors num-spilled num-root-spills))
+
+
 (define (choose-color var unavail-colors)
   (for/first ([c (in-naturals)]
               #:when (color-avail? unavail-colors c))
@@ -93,9 +126,13 @@
   (and (< color (num-registers-for-alloc))
        (set-member? callee-save (color->register color))))
 
-(define (color->home color num-registers-for-alloc num-used-callee-regs)
-  (if (< color num-registers-for-alloc)
-      (Reg (color->register color))
-      (Deref 'rbp
-             (* -8 (+ num-used-callee-regs
-                       (- (+ color 1) num-registers-for-alloc))))))
+(define (color->home color num-reg-for-alloc num-used-callee num-root-spills)
+  (cond
+    [(< color num-reg-for-alloc)
+     (Reg (color->register color))]
+    [(< color (+ num-reg-for-alloc num-root-spills))
+     (Deref 'r15 (* -8 (add1 (- color num-reg-for-alloc))))]
+    [else
+     (Deref 'rbp (* -8
+                    (+ (add1 (- color num-reg-for-alloc num-root-spills))
+                       num-used-callee)))]))
