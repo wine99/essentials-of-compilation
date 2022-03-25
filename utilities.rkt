@@ -350,12 +350,12 @@ Changelog:
          (write-string "locals-types:" port)
          (newline port)
          (cond [(dict? data)
-                (write-string "    " port)
                 (for ([(var type) (in-dict data)])
+                  (write-string "    " port)
                   (write-string (symbol->string var) port)
                   (write-string " : " port)
                   (recur type port)
-                  (write-string ", " port)
+                  (write-string ",\n" port)
                   )
                 (newline port)]
                [else

@@ -52,9 +52,11 @@
     (Callq 'initialize 2)
     (Instr 'movq (list (Global 'rootstack_begin) (Reg 'r15))))
    (for/list ([i (in-range num-root-spills)])
-     (Instr 'movq (list (Imm 0) (Deref 'r15 i))))
+     (Instr 'movq (list (Imm 0) (Deref 'r15 (* 8 i)))))
    (list
     (Instr 'addq (list (Imm (* 8 num-root-spills)) (Reg 'r15))))))
 
 (define root-stack-size 16384)
 (define heap-size 16384)
+;(define root-stack-size 1024)
+;(define heap-size 1024)

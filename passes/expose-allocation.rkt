@@ -29,7 +29,7 @@
      (Begin (for/list ([e es]) (expose-exp e)) (expose-exp final-e))]
     [(WhileLoop cnd body)
      (WhileLoop (expose-exp cnd) (expose-exp body))]
-    [(or (Int _) (Var _) (Bool _)) e]))
+    [(or (Int _) (Var _) (Bool _) (Void)) e]))
 
 (define (expose vars exposed-es alloc-and-init)
   (match exposed-es
@@ -49,10 +49,12 @@
               (Void)
               (Collect (* 8 (add1 len)))))
     (Let vec-sym (Allocate len vec-type)
-         (Begin (for/list ([i (in-naturals)] [e exposed-es] [v vars])
-                  (Prim 'vector-set! (list (Var vec-sym)
-                                           (Int i)
-                                           (if (atm? e)
-                                               e
-                                               (Var v)))))
-                (Var vec-sym)))))
+         (if (= len 0)
+             (Var vec-sym)
+             (Begin (for/list ([i (in-naturals)] [e exposed-es] [v vars])
+                      (Prim 'vector-set! (list (Var vec-sym)
+                                               (Int i)
+                                               (if (atm? e)
+                                                   e
+                                                   (Var v)))))
+                    (Var vec-sym))))))
