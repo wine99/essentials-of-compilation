@@ -4,7 +4,15 @@
 
 (define (shrink p)
   (match p
-    [(Program info e) (Program info (shrink-exp e))]))
+    [(ProgramDefsExp info defs e)
+     (ProgramDefs
+      info
+      (append
+       (for/list ([def defs])
+         (match def
+           [(Def name param* rty info body)
+            (Def name param* rty info (shrink-exp body))]))
+       (list (Def 'main '() 'Integer '() (shrink-exp e)))))]))
 
 (define (shrink-exp e)
   (match e
@@ -26,4 +34,6 @@
     [(Begin es final-e)
      (Begin (for/list ([e es]) (shrink-exp e)) (shrink-exp final-e))]
     [(WhileLoop cnd body) (WhileLoop (shrink-exp cnd) (shrink-exp body))]
-    [(HasType e type) (HasType (shrink-exp e) type)]))
+    [(HasType e type) (HasType (shrink-exp e) type)]
+    [(Apply fun args) (Apply (shrink-exp fun)
+                             (for/list ([arg args]) (shrink-exp arg)))]))

@@ -5,7 +5,30 @@
 ;; uniquify : R1 -> R1
 (define (uniquify p)
   (match p
-    [(Program info e) (Program info ((uniquify-exp '()) e))]))
+    [(Program info e) (Program info ((uniquify-exp '()) e))]
+    [(ProgramDefs info defs)
+     (define top-level
+       (for/hash ([def defs])
+         (define name (Def-name def))
+         (if (eq? name 'main)
+             (values 'main 'main)
+             (values (Def-name def) (gensym (Def-name def))))))
+     (ProgramDefs
+      info
+      (for/list ([def defs])
+        (match def
+          [(Def name param* rty info body)
+           (define env
+             (for/fold ([env top-level])
+                       ([(x t) (in-dict param*)])
+               (dict-set env x (gensym x))))
+           (Def (dict-ref env name)
+                (for/list ([(x t) (in-dict param*)])
+                  (cons (dict-ref env x) t))
+                rty
+                info
+                ((uniquify-exp env) body))])))]))
+
 
 (define ((uniquify-exp env) e)
   (define recur (uniquify-exp env))
@@ -26,4 +49,6 @@
     [(Begin es final-e)
      (Begin (for/list ([e es]) (recur e)) (recur final-e))]
     [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
-    [(HasType e type) (HasType (recur e) type)]))
+    [(HasType e type) (HasType (recur e) type)]
+    [(Apply fun args)
+     (Apply (recur fun) (for/list ([arg args]) (recur arg)))]))

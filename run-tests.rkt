@@ -2,8 +2,8 @@
 #lang racket
 
 (require "utilities.rkt")
-(require "interp-Lvec.rkt")
-(require "type-check-Lvec.rkt")
+(require "interp-Lfun.rkt")
+(require "type-check-Lfun.rkt")
 (require "interp.rkt")
 (require "compiler.rkt")
 
@@ -26,10 +26,11 @@
         all-tests)))
 
 
-(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "var_test" (tests-for "var"))
-(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "cond_test" (tests-for "cond"))
-(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "while_test" (tests-for "while"))
-(interp-tests "vector" type-check-Lvec compiler-passes interp-Lvec "vectors_test" (tests-for "vectors"))
+(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "var_test" (tests-for "var"))
+(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "cond_test" (tests-for "cond"))
+(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "while_test" (tests-for "while"))
+(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "vectors_test" (tests-for "vectors"))
+(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "functions_test" (tests-for "functions"))
 
 
 ;; Uncomment the following when all the passes are complete to

@@ -63,6 +63,10 @@
            (unless (< (length xs) max-parameters)
              (error 'type-check "~a has too many parameters, max is ~a"
                     f max-parameters))
+           (for/fold ([params (set f)]) ([x xs])
+             (when (set-member? params x)
+               (error 'type-check "duplicate argument identifier: ~a in ~a" x e))
+             (set-add params x))
            (define new-env (append (map cons xs ps) env))
            (define-values (body^ ty^) ((type-check-exp new-env) body))
            (check-type-equal? ty^ rt body)
@@ -77,8 +81,12 @@
     (define/override (type-check-program e)
       (match e
         [(ProgramDefsExp info ds body)
-         (define new-env (for/list ([d ds])
-                           (cons (Def-name d) (fun-def-type d))))
+         (define new-env
+           (for/fold ([new-env '()])
+                     ([d ds])
+             (when (dict-ref new-env (Def-name d) #f)
+               (error 'type-check "function has already defined: ~a" (Def-name d)))
+             (cons (cons (Def-name d) (fun-def-type d)) new-env)))
          (define ds^ (for/list ([d ds]) ((type-check-def new-env) d)))
          (define-values (body^ ty) ((type-check-exp new-env) body))
          (check-type-equal? ty 'Integer body)
