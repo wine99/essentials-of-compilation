@@ -5,7 +5,6 @@
 ;; uniquify : R1 -> R1
 (define (uniquify p)
   (match p
-    [(Program info e) (Program info ((uniquify-exp '()) e))]
     [(ProgramDefs info defs)
      (define top-level
        (for/hash ([def defs])
@@ -22,7 +21,7 @@
              (for/fold ([env top-level])
                        ([(x t) (in-dict param*)])
                (dict-set env x (gensym x))))
-           (Def (dict-ref env name)
+           (Def (dict-ref top-level name)
                 (for/list ([(x t) (in-dict param*)])
                   (cons (dict-ref env x) t))
                 rty

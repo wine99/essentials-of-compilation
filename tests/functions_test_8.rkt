@@ -1,4 +1,4 @@
 (define (f [f : Integer]) : Integer
-  0)
+  f)
 
-(f 1)
+(f 42)

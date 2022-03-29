@@ -63,7 +63,7 @@
            (unless (< (length xs) max-parameters)
              (error 'type-check "~a has too many parameters, max is ~a"
                     f max-parameters))
-           (for/fold ([params (set f)]) ([x xs])
+           (for/fold ([params (set)]) ([x xs])
              (when (set-member? params x)
                (error 'type-check "duplicate argument identifier: ~a in ~a" x e))
              (set-add params x))
@@ -72,7 +72,7 @@
            (check-type-equal? ty^ rt body)
            (Def f p:t* rt info body^)]
           [else (error 'type-check "ill-formed function definition ~a" e)]
-          )))	 
+          )))
 
     (define/public (fun-def-type d)
       (match d [(Def f (list `[,xs : ,ps] ...) rt info body)  `(,@ps -> ,rt)]

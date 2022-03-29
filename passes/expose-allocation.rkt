@@ -29,7 +29,7 @@
      (Begin (for/list ([e es]) (expose-exp e)) (expose-exp final-e))]
     [(WhileLoop cnd body)
      (WhileLoop (expose-exp cnd) (expose-exp body))]
-    [(or (Int _) (Var _) (Bool _) (Void)) e]))
+    [(or (Int _) (Var _) (Bool _) (Void) (GetBang _)) e]))
 
 (define (expose vars exposed-es alloc-and-init)
   (match exposed-es

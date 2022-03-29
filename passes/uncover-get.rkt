@@ -4,15 +4,20 @@
 
 (define (uncover-get! p)
   (match p
-    [(Program info e)
-     (define set!-vars (collect-set! e))
-     (Program info
-              ((uncover-get!-exp set!-vars) e))]))
+    [(ProgramDefs info defs)
+     (ProgramDefs
+      info
+      (for/list ([def defs])
+        (match def
+          [(Def name param* rty info body)
+           (define set!-vars (collect-set! body))
+           (Def name param* rty info
+                ((uncover-get!-exp set!-vars) body))])))]))
 
 (define (collect-set! e)
   (match e
     [(or (Int _) (Var _) (Bool _) (Void)) (set)]
-    [(Prim 'read _) (set)]
+    [(Prim op '()) (set)]
     [(Prim op es)
      (apply set-union (for/list ([e es]) (collect-set! e)))]
     [(Let x rhs body)
@@ -26,6 +31,10 @@
             (for/list ([e (append es (list final-e))]) (collect-set! e)))]
     [(WhileLoop cnd body)
      (set-union (collect-set! cnd) (collect-set! body))]
+    [(HasType e type) (collect-set! e)]
+    [(Apply fun args)
+     (apply set-union
+            (for/list ([e (append (list fun) args)]) (collect-set! e)))]
     [(or (Collect _) (Allocate _ _) (GlobalValue _)) (set)]))
 
 (define ((uncover-get!-exp set!-vars) e)
@@ -42,4 +51,6 @@
     [(SetBang x e) (SetBang x (recur e))]
     [(Begin es final-e) (Begin (for/list ([e es]) (recur e)) (recur final-e))]
     [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
+    [(HasType e type) (HasType (recur e) type)]
+    [(Apply fun args) (Apply (recur fun) (for/list ([a args]) (recur a)))]
     [(or (Collect _) (Allocate _ _) (GlobalValue _)) e]))
