@@ -4,7 +4,13 @@
 
 (define (expose-allocation p)
   (match p
-    [(Program info e) (Program info (expose-exp e))]))
+    [(ProgramDefs info defs)
+     (ProgramDefs
+      info
+      (for/list ([def defs])
+        (match def
+          [(Def name param* rty info body)
+           (Def name param* rty info (expose-exp body))])))]))
 
 ; After expose-allocation, the wrapping HasType is not needed anymore.
 
@@ -29,7 +35,9 @@
      (Begin (for/list ([e es]) (expose-exp e)) (expose-exp final-e))]
     [(WhileLoop cnd body)
      (WhileLoop (expose-exp cnd) (expose-exp body))]
-    [(or (Int _) (Var _) (Bool _) (Void) (GetBang _)) e]))
+    [(Apply fun args)
+     (Apply (expose-exp fun) (map expose-exp args))]
+    [(or (Int _) (Var _) (Bool _) (Void) (GetBang _) (FunRef _ _)) e]))
 
 (define (expose vars exposed-es alloc-and-init)
   (match exposed-es

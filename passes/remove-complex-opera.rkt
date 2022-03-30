@@ -5,7 +5,13 @@
 ;; remove-complex-opera* : R1 -> R1
 (define (remove-complex-opera* p)
   (match p
-    [(Program info e) (Program info (rco-exp e))]))
+    [(ProgramDefs info defs)
+     (ProgramDefs
+      info
+      (for/list ([def defs])
+        (match def
+          [(Def name param* rty info body)
+           (Def name param* rty info (rco-exp body))])))]))
 
 ; Apply rco-atom to subexpressions that need to be atomic,
 ; apply rco-exp to these that do not.
@@ -30,13 +36,23 @@
        (for/lists (l1 l2) ([e es]) (rco-atom e)))
      (define pairs (append* _pairs))
      (values (Var tmp) (append pairs `((,tmp . ,(Prim op rcoed-es)))))]
-    [(or (If _ _ _) (GetBang _) (Begin _ _) (WhileLoop _ _))
+    [(Apply fun args)
+     (define-values (rcoed-fun pairs) (rco-atom fun))
+     (define-values
+       (rcoed-args _pairs)
+       (for/lists (l1 l2) ([a args]) (rco-atom a)))
+     (values (Var tmp)
+             (append pairs
+                     (append* _pairs)
+                     `((,tmp . ,(Apply rcoed-fun rcoed-args)))))]
+    [(or (If _ _ _) (GetBang _) (Begin _ _) (WhileLoop _ _) (FunRef _ _))
      (values (Var tmp) `((,tmp . ,(rco-exp e))))]))
 
 (define (rco-exp e)
   (match e
     [(or (Int _) (Var _) (Bool _) (Void)
-         (Collect _) (Allocate _ _) (GlobalValue _))
+         (Collect _) (Allocate _ _) (GlobalValue _)
+         (FunRef _ _))
      e]
     [(GetBang x) (Var x)]
     [(Let x rhs body)
@@ -53,4 +69,11 @@
     [(Begin es final-e)
      (Begin (for/list ([e es]) (rco-exp e)) (rco-exp final-e))]
     [(WhileLoop cnd body)
-     (WhileLoop (rco-exp cnd) (rco-exp body))]))
+     (WhileLoop (rco-exp cnd) (rco-exp body))]
+    [(Apply fun args)
+     (define-values (rcoed-fun pairs) (rco-atom fun))
+     (define-values
+       (rcoed-args _pairs)
+       (for/lists (l1 l2) ([a args]) (rco-atom a)))
+     (make-lets (append pairs (append* _pairs))
+                (Apply rcoed-fun rcoed-args))]))

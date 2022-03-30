@@ -6,9 +6,18 @@
 ;; explicate-control : R1 -> C0
 (define (explicate-control p)
   (match p
-    [(Program info e)
-     (define-values (start-block blocks) (explicate-tail e '()))
-     (type-check-Cvec (CProgram info (cons (cons 'start start-block) blocks)))]))
+    [(ProgramDefs info defs)
+     (ProgramDefs info (map explicate-control-def defs))]))
+
+(define (explicate-control-def def)
+  (match def
+    [(Def name param* rty info body)
+     (define-values (start-block blocks) (explicate-tail body '()))
+     (Def name param* rty info
+       (cons (cons (string->symbol (string-append (symbol->string name)
+                                                  "start"))
+                   start-block)
+             blocks))]))
 
 ; e is in tail position
 (define (explicate-tail e blocks)
@@ -26,6 +35,8 @@
     [(Begin (list e1 es ...) final-e)
      (define-values (cont^ blocks^) (explicate-tail (Begin es final-e) blocks))
      (explicate-effect e1 cont^ blocks^)]
+    [(Apply fun args)
+     (values (TailCall fun args) blocks)]
     [_ (values (Return e) blocks)]))
 
 ; Use this function to avoid repeating and also avoid trivial blocks
@@ -38,7 +49,6 @@
 ; e is in assignment position
 (define (explicate-assign e x cont blocks)
   (match e
-    #;[(HasType e1 type) (explicate-assign e1 x cont blocks)]
     [(Let y rhs body)
      (define-values (cont^ blocks^) (explicate-assign body x cont blocks))
      (explicate-assign rhs y cont^ blocks^)]
@@ -62,6 +72,8 @@
      (define-values (body-block blocks^^) (explicate-effect body (Goto loop-label) blocks^))
      (define-values (cnd-block blocks^^^) (explicate-pred cnd body-block cont^ blocks^^))
      (values (Goto loop-label) (cons `(,loop-label . ,cnd-block) blocks^^^))]
+    [(Apply fun args)
+     (values (Seq (Assign (Var x) (Call fun args)) cont) blocks)]
     [_ (values (Seq (Assign (Var x) e) cont) blocks)]))
 
 ; e is in predicate position
@@ -87,6 +99,9 @@
      (define-values (cont^ blocks^)
        (explicate-pred (Begin es final-e) thn-block els-block blocks))
      (explicate-effect e1 cont^ blocks^)]
+    [(Apply fun args)
+     (define tmp (gensym 'tmp))
+     (explicate-pred (Let tmp e (Var tmp)) thn-block els-block blocks)]
     [_
      (define-values (els-block^ blocks^) (wrap-with-goto els-block blocks))
      (define-values (thn-block^ blocks^^) (wrap-with-goto thn-block blocks^))
@@ -121,4 +136,6 @@
      (define loop-label (gensym 'loop))
      (define-values (body-block blocks^) (explicate-effect body (Goto loop-label) blocks))
      (define-values (cnd-block blocks^^) (explicate-pred cnd body-block cont blocks^))
-     (values (Goto loop-label) (cons `(,loop-label . ,cnd-block) blocks^^))]))
+     (values (Goto loop-label) (cons `(,loop-label . ,cnd-block) blocks^^))]
+    [(Apply fun args)
+     (values (Seq (Call fun args) cont) blocks)]))
