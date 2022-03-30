@@ -24,13 +24,13 @@
                  (FunRef x (hash-ref defs-name-arity x))
                  exp)]
     [(Let x e body) (Let x (recur e) (recur body))]
-    [(Prim op es) (Prim op (for/list ([e es]) (recur e)))]
+    [(Prim op es) (Prim op (map recur es))]
     [(If e1 e2 e3) (If (recur e1) (recur e2) (recur e3))]
     [(SetBang x e) (SetBang x (recur e))]
     [(Begin es final-e)
-     (Begin (for/list ([e es]) (recur e)) (recur final-e))]
+     (Begin (map recur es) (recur final-e))]
     [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
     [(HasType e type) (HasType (recur e) type)]
     [(Apply fun args)
-     (Apply (recur fun) (for/list ([a args]) (recur a)))]
+     (Apply (recur fun) (map recur args))]
     [(or (Int _) (Bool _) (Void) (GetBang _)) exp]))

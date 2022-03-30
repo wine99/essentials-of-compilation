@@ -27,13 +27,12 @@
      (If (shrink-exp e1)
          (Bool #t)
          (shrink-exp e2))]
-    [(Prim op es) (Prim op (for/list ([e es]) (shrink-exp e)))]
+    [(Prim op es) (Prim op (map shrink-exp es))]
     [(SetBang x e) (SetBang x (shrink-exp e))]
     [(Begin '() final-e)
      (shrink-exp final-e)]
     [(Begin es final-e)
-     (Begin (for/list ([e es]) (shrink-exp e)) (shrink-exp final-e))]
+     (Begin (map shrink-exp es) (shrink-exp final-e))]
     [(WhileLoop cnd body) (WhileLoop (shrink-exp cnd) (shrink-exp body))]
     [(HasType e type) (HasType (shrink-exp e) type)]
-    [(Apply fun args) (Apply (shrink-exp fun)
-                             (for/list ([arg args]) (shrink-exp arg)))]))
+    [(Apply fun args) (Apply (shrink-exp fun) (map shrink-exp args))]))

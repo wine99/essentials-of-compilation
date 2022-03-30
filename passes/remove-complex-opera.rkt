@@ -67,7 +67,7 @@
      (make-lets pairs (Prim op rcoed-es))]
     [(SetBang x e) (SetBang x (rco-exp e))]
     [(Begin es final-e)
-     (Begin (for/list ([e es]) (rco-exp e)) (rco-exp final-e))]
+     (Begin (map rco-exp es) (rco-exp final-e))]
     [(WhileLoop cnd body)
      (WhileLoop (rco-exp cnd) (rco-exp body))]
     [(Apply fun args)

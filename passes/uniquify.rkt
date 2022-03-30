@@ -40,14 +40,14 @@
             (recur e)
             ((uniquify-exp (dict-set env x new-x)) body)))]
     [(Prim op es)
-     (Prim op (for/list ([e es]) (recur e)))]
+     (Prim op (map recur es))]
     [(If e1 e2 e3)
      (If (recur e1) (recur e2) (recur e3))]
     [(SetBang x e)
      (SetBang (dict-ref env x) (recur e))]
     [(Begin es final-e)
-     (Begin (for/list ([e es]) (recur e)) (recur final-e))]
+     (Begin (map recur es) (recur final-e))]
     [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
     [(HasType e type) (HasType (recur e) type)]
     [(Apply fun args)
-     (Apply (recur fun) (for/list ([arg args]) (recur arg)))]))
+     (Apply (recur fun) (map recur args))]))

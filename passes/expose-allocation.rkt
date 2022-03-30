@@ -20,7 +20,7 @@
      (define v (gensym 'vector))
      (define len (length es))
      (define vars (for/list ([_ (in-range len)]) (gensym 'tmp)))
-     (define exposed-es (for/list ([e es]) (expose-exp e)))
+     (define exposed-es (map expose-exp es))
      (define alloc-and-init
        (make-alloc-and-init v len type vars exposed-es))
      (expose vars exposed-es alloc-and-init)]
@@ -29,10 +29,10 @@
     [(If e1 e2 e3)
      (If (expose-exp e1) (expose-exp e2) (expose-exp e3))]
     [(Prim op es)
-     (Prim op (for/list ([e es]) (expose-exp e)))]
+     (Prim op (map expose-exp es))]
     [(SetBang x rhs) (SetBang x (expose-exp rhs))]
     [(Begin es final-e)
-     (Begin (for/list ([e es]) (expose-exp e)) (expose-exp final-e))]
+     (Begin (map expose-exp es) (expose-exp final-e))]
     [(WhileLoop cnd body)
      (WhileLoop (expose-exp cnd) (expose-exp body))]
     [(Apply fun args)
