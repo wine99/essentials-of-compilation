@@ -3,13 +3,12 @@
 (require "../type-check-Lfun.rkt")
 (provide limit-functions)
 
+; This pass need to type-check because new vectors will be created
+; and we need type-checker to wrap HasTypes around them.
 (define (limit-functions p)
   (match p
     [(ProgramDefs info defs)
-     (type-check-Lfun (ProgramDefs
-                       info
-                       (for/list ([def defs])
-                         (limit-def def))))]))
+     (ProgramDefs info (for/list ([def defs]) (limit-def def)))]))
 
 (define (limit-def def)
   (match def
@@ -54,8 +53,6 @@
          (Apply (recur fun)
                 (let ([args (map recur args)])
                   (append (take args 5)
-                          ; Need call type-check-program to
-                          ; wrap a HasType around the new vectors
                           (list (Prim 'vector (drop args 5))))))
          (Apply (recur fun) (map recur args)))]
     [(or (Int _) (Bool _) (Void) (FunRef _ _)) exp]))

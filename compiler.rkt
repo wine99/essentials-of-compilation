@@ -32,7 +32,7 @@
     ("uniquify" ,uniquify ,interp-Lfun #;,type-check-Lfun)
     ("uncover get!" ,uncover-get! ,interp-Lfun #;,type-check-Lfun)
     ("reveal functions" ,reveal-functions ,interp-Lfun-prime #;,type-check-Lfun)
-    ("limit functions" ,limit-functions ,interp-Lfun-prime #;,type-check-Lfun)
+    ("limit functions" ,limit-functions ,interp-Lfun-prime ,type-check-Lfun)
     ;("expose allocation" ,expose-allocation ,interp-Lvec-prime #;,type-check-Lvec)
     ;("remove complex opera*" ,remove-complex-opera* ,interp-Lvec-prime #;,type-check-Lvec)
     ;("explicate control" ,explicate-control ,interp-Cvec #;,type-check-Cvec)

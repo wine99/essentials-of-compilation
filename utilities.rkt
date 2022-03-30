@@ -2041,7 +2041,8 @@ Changelog:
                                       (trace "type checking...")
                                       (type-checker new-p^)]
                                      [else new-p^]))
-                 (trace "type-check output: " (strip-has-type new-p))
+                 (when type-checker
+                   (trace "type-check output: " (strip-has-type new-p)))
                  (cond [interp
                         (define result
                           (if (file-exists? input-file-name) 
