@@ -6,13 +6,19 @@
 
 (define (uncover-live p)
   (match p
-    [(X86Program info blocks)
-     (define G (blocks->graph blocks))
+    [(ProgramDefs info defs)
+     (ProgramDefs info (map uncover-live-def defs))]))
+
+(define (uncover-live-def def)
+  (match def
+    [(Def f empty-params rty info blocks)
+     (define conclusion-label (symbol-append f 'conclusion))
+     (define G (blocks->graph blocks conclusion-label))
      (define new-blocks (make-hash))
 
      ; live-before set of each label/block
      (define label->live (make-hash))
-     (hash-set! label->live 'conclusion (set 'rax 'rsp))
+     (hash-set! label->live conclusion-label (set 'rax 'rsp))
      (for ([label (in-dict-keys blocks)])
        (hash-set! label->live label (set)))
 
@@ -32,29 +38,30 @@
            (debug (format "enqueue ~a\n" label^))
            (enqueue! worklist label^))))
 
-     (X86Program
-      (dict-set info 'label->live label->live)
-      ; keep the original order of the blocks
-      (for/list ([label (in-dict-keys blocks)])
-        (cons label (hash-ref new-blocks label))))]))
+     (Def f empty-params rty
+          (dict-set info 'label->live label->live)
+          ; keep the original order of the blocks
+          (for/list ([label (in-dict-keys blocks)])
+            (cons label (hash-ref new-blocks label))))]))
 
-(define (blocks->graph blocks)
+(define (blocks->graph blocks conclusion-label)
   (define G (directed-graph '()))
   (for ([label (in-dict-keys blocks)])
     (add-vertex! G label))
   (for ([(s b) (in-dict blocks)])
-    (for ([t (adjacent-block-labels b)])
+    (for ([t (adjacent-block-labels b conclusion-label)])
       (add-directed-edge! G s t)))
   G)
 
-(define (adjacent-block-labels b)
+(define (adjacent-block-labels b conclusion-label)
   (match b
     [(Block info instrs)
      (for/fold ([adj (set)])
                ([instr instrs])
        (match instr
-         [(Jmp 'conclusion) adj]
-         [(Jmp label) (set-add adj label)]
+         [(Jmp label)
+          #:when (not (eq? label conclusion-label))
+          (set-add adj label)]
          [(JmpIf _ label) (set-add adj label)]
          [_ adj]))]))
 
@@ -105,7 +112,12 @@
     [(Callq label n) (set)]
     ; jmp is handled in uncover-live-instr
     [(Jmp _) (set)]
-    [(JmpIf _ _) (set)]))
+    [(JmpIf _ _) (set)]
+    [(Instr 'leaq (list arg1 arg2)) (arg->set arg1)]
+    [(or (IndirectCallq arg arity)
+         (TailJmp arg arity))
+     (set-union (arg->set arg)
+                (vector->set (vector-take arg-registers arity)))]))
 
 (define (vars-written instr)
   (match instr
@@ -113,10 +125,14 @@
     [(Instr op (list arg1 arg2)) (arg->set arg2)]
     [(Instr 'negq (list arg)) (arg->set arg)]
     [(Instr 'set (list _ arg)) (arg->set arg)]
-    [(Callq label n) caller-save]
+    [(Callq label n) (caller-save-for-alloc)]
     ; jmp is handled in uncover-live-instr
     [(Jmp _) (set)]
-    [(JmpIf _ _) (set)]))
+    [(JmpIf _ _) (set)]
+    [(Instr 'leaq (list arg1 arg2)) (arg->set arg2)]
+    [(or (IndirectCallq arg arity)
+         (TailJmp arg arity))
+     (caller-save-for-alloc)]))
 
 (define (arg->set arg)
   (match arg
@@ -124,5 +140,6 @@
     [(Var x) (set x)]
     [(Reg reg) (set reg)]
     [(ByteReg reg) (set (byte-reg->full-reg reg))]
-    [(Deref reg int) (set reg)]
-    [(Global _) (set)]))
+    [(Deref reg offset) (set reg)]
+    [(Global _) (set)]
+    [(FunRef f arity) (set)]))

@@ -5,20 +5,42 @@
 ;; select-instructions : C0 -> pseudo-x86
 (define (select-instructions p)
   (match p
-    [(CProgram info blocks)
-     (X86Program info
-                 (for/list ([(label tail) (in-dict blocks)])
-                   (cons label (Block '() (select-instr-tail tail)))))]))
+    [(ProgramDefs info defs)
+     (ProgramDefs info (map select-instr-def defs))]))
 
-(define (select-instr-tail t)
+(define (select-instr-def def)
+  (match def
+    [(Def name `([,xs : ,ts] ...) rty info blocks)
+     (define new-blocks
+       (for/list ([(label tail) (in-dict blocks)])
+         (cons label (Block '() (select-instr-tail name tail)))))
+     (define param-moves
+       (for/list ([x xs] [r arg-registers])
+         (Instr 'movq (list (Reg r) (Var x)))))
+     (define start-label (symbol-append name 'start))
+     (define new-start-block
+       (match (dict-ref new-blocks start-label)
+         [(Block info instrs)
+          (Block info (append param-moves instrs))]))
+     (define new-info
+       (dict-set-all
+        info
+        `((locals-types . ,(append (map cons xs ts)
+                                  (dict-ref info 'locals-types)))
+          (num-params . ,(length xs)))))
+     (Def name '() rty new-info
+          (dict-set new-blocks start-label new-start-block))]))
+
+(define (select-instr-tail def-name t)
   (match t
     [(Seq stmt t*)
-     (append (select-instr-stmt stmt) (select-instr-tail t*))]
+     (append (select-instr-stmt stmt) (select-instr-tail def-name t*))]
     [(Return (Prim 'read '()))
-     (list (Callq 'read_int 0) (Jmp 'conclusion))]
+     (list (Callq 'read_int 0)
+           (Jmp (symbol-append def-name 'conclusion)))]
     [(Return e) (append
                  (select-instr-assign (Reg 'rax) e)
-                 (list (Jmp 'conclusion)))]
+                 (list (Jmp (symbol-append def-name 'conclusion))))]
     [(Goto label) (list (Jmp label))]
     [(IfStmt (Prim cmp (list a1 a2))
              (Goto label1)
@@ -33,7 +55,11 @@
      (append (select-instr-assign (Reg 'rax) (Prim 'vector-ref args))
              (list (Instr 'cmpq (list (Reg 'rax) (Imm 1)))
                    (JmpIf 'e label1)
-                   (Jmp label2)))]))
+                   (Jmp label2)))]
+    [(TailCall f args)
+     (append (for/list ([arg (map select-instr-atm args)] [r arg-registers])
+               (Instr 'movq (list arg (Reg r))))
+             (list (TailJmp f (length args))))]))
 
 (define (select-instr-atm a)
   (match a
@@ -66,8 +92,14 @@
         #:when (equal? x x1)
         (list (Instr 'negq (list (Var x)))
               (Instr 'addq (list (select-instr-atm a1) (Var x))))]
+
+       [(Call f args)
+        (append (for/list ([arg (map select-instr-atm args)] [r arg-registers])
+                  (Instr 'movq (list arg (Reg r))))
+                (list (IndirectCallq f (length args))
+                      (Instr 'movq (list (Reg 'rax) (Var x)))))]
        [_ (select-instr-assign (Var x) e)])]
-    
+
     [(Prim 'read '()) (list (Callq 'read_int 0))]
     [(Prim 'vector-set! (list vec (Int n) rhs))
      (list (Instr 'movq (list (select-instr-atm vec) (Reg 'r11)))
@@ -75,7 +107,13 @@
     [(Collect bytes)
      (list (Instr 'movq (list (Reg 'r15) (Reg 'rdi)))
            (Instr 'movq (list (Imm bytes) (Reg 'rsi)))
-           (Callq 'collect 2))]))
+           (Callq 'collect 2))]
+
+    [(Call f args)
+     (append (for/list ([arg (map select-instr-atm args)] [r arg-registers])
+               (Instr 'movq (list arg (Reg r))))
+             (list (IndirectCallq f (length args))))]))
+
 
 ; This v can also be (Reg 'rax)
 (define (select-instr-assign v e)
@@ -97,9 +135,9 @@
 
     [(Prim 'not (list a))
      (if (equal? v a)
-         (list (Instr 'xorq (Imm 1) v))
-         (list (Instr 'movq (select-instr-atm a) v)
-               (Instr 'xorq (Imm 1) v)))]
+         (list (Instr 'xorq (list (Imm 1) v)))
+         (list (Instr 'movq (list (select-instr-atm a) v))
+               (Instr 'xorq (list (Imm 1) v))))]
     [(Prim cmp (list a1 a2))
      #:when (cmp? cmp)
      (list (Instr 'cmpq (list (select-instr-atm a2) (select-instr-atm a1)))
@@ -125,7 +163,11 @@
      (list (Instr 'movq (list (Global 'free_ptr) (Reg 'r11)))
            (Instr 'addq (list (Imm (* 8 (add1 len))) (Global 'free_ptr)))
            (Instr 'movq (list (Imm tag) (Deref 'r11 0)))
-           (Instr 'movq (list (Reg 'r11) v)))]))
+           (Instr 'movq (list (Reg 'r11) v)))]
+
+    [(FunRef _ _)
+     (list (Instr 'leaq (list e v)))]))
+
 
 (define cmp-suffix #hash((eq? . e)
                          (< . l)

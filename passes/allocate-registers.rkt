@@ -7,7 +7,12 @@
 
 (define (allocate-registers p)
   (match p
-    [(X86Program info blocks)
+    [(ProgramDefs info defs)
+     (ProgramDefs info (map alloc-reg-def defs))]))
+
+(define (alloc-reg-def def)
+  (match def
+    [(Def f empty-params rty info blocks)
      (define vars
        (for/list ([(var type) (in-dict (dict-ref info 'locals-types))]) var))
      (define interf (dict-ref info 'conflicts))
@@ -25,14 +30,13 @@
                                    num-root-spills))
          (verbose (format "home of ~a is ~a\n" var home))
          (values var home)))
-     (X86Program
-      ; (dict-set (dict-set info 'used-callee u-c-r)
-      ;           'stack-space (+ num-spilled num-u-c-r))
-      `((used-callee . ,used-callee)
-        (num-spilled . ,num-spilled)
-        (num-root-spills . ,num-root-spills))
-      (for/list ([(label block) (in-dict blocks)])
-        (cons label (assign-homes-block block locals-homes))))]))
+     (Def f empty-params rty
+          `((used-callee . ,used-callee)
+            (num-spilled . ,num-spilled)
+            (num-root-spills . ,num-root-spills)
+            (num-params . ,(dict-ref info 'num-params)))
+          (for/list ([(label block) (in-dict blocks)])
+            (cons label (assign-homes-block block locals-homes))))]))
 
 
 ; takes an interference graph and a list of all the variables
@@ -124,7 +128,7 @@
 
 (define (callee-color? color)
   (and (< color (num-registers-for-alloc))
-       (set-member? callee-save (color->register color))))
+       (set-member? (callee-save-for-alloc) (color->register color))))
 
 (define (color->home color num-reg-for-alloc num-used-callee num-root-spills)
   (cond

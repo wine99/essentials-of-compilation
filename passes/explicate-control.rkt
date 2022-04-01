@@ -14,9 +14,7 @@
     [(Def name param* rty info body)
      (define-values (start-block blocks) (explicate-tail body '()))
      (Def name param* rty info
-       (cons (cons (string->symbol (string-append (symbol->string name)
-                                                  "start"))
-                   start-block)
+       (cons (cons (symbol-append name 'start) start-block)
              blocks))]))
 
 ; e is in tail position

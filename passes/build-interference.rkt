@@ -7,7 +7,12 @@
 
 (define (build-interference p)
   (match p
-    [(X86Program info blocks)
+    [(ProgramDefs info defs)
+     (ProgramDefs info (map build-interf-def defs))]))
+
+(define (build-interf-def def)
+  (match def
+    [(Def f empty-params rty info blocks)
      (define interf (directed-graph '()))
      (define locals-types (dict-ref info 'locals-types))
      (define label->live (dict-ref info 'label->live))
@@ -21,8 +26,8 @@
        (match block
          [(Block info instrs)
           (build-interf instrs (dict-ref info 'live-afters) locals-types interf)]))
-     ; (print-dot interf "interf.txt")
-     (X86Program (dict-set info 'conflicts interf) blocks)]))
+     ; (print-dot interf (string-append (symbol->string f) "interf.txt"))
+     (Def f empty-params rty (dict-set info 'conflicts interf) blocks)]))
 
 (define (build-interf instrs live-afters locals-types interf)
   (for ([instr instrs] [live-after live-afters])
@@ -40,7 +45,7 @@
                #:when (not (equal? (byte-reg->full-reg s) d)))
            (verbose (format "~a -- ~a\n" v d))
            (add-edge! interf v d)))]
-      [(Callq 'collect _)
+      [(or (Callq _ _) (IndirectCallq _ _))
        (for ([v live-after])
          (if (root-type? (dict-ref locals-types v #f))
              (begin
@@ -51,7 +56,7 @@
                  ; Vars that will be put on the root stack should not have
                  ; same color as vars that are going the regular stack
                  (add-edge! interf v d)))
-             (for ([d caller-save])
+             (for ([d (caller-save-for-alloc)])
                (add-edge! interf v d))))]
       [_
        (for ([v live-after])

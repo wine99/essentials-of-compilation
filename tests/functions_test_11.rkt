@@ -4,4 +4,4 @@
 
 (define (g) : Integer 42)
 
-(g)
+(f)

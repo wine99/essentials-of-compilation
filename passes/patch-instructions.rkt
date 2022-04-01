@@ -5,11 +5,16 @@
 ;; patch-instructions : psuedo-x86 -> x86
 (define (patch-instructions p)
   (match p
-    [(X86Program info blocks)
-     (X86Program
+    [(ProgramDefs info defs)
+     (ProgramDefs
       info
-      (for/list ([(label block) (in-dict blocks)])
-        (cons label (patch-instr-block block))))]))
+      (for/list ([def defs])
+        (match def
+          [(Def f empty-params rty info blocks)
+           (define new-blocks
+             (for/list ([(label block) (in-dict blocks)])
+               (cons label (patch-instr-block block))))
+           (Def f empty-params rty info new-blocks)])))]))
 
 (define (patch-instr-block block)
   (match block
@@ -35,5 +40,13 @@
            [(Instr op (list (Deref reg1 off1) (Deref reg2 off2)))
             (list (Instr 'movq (list (Deref reg1 off1) (Reg 'rax)))
                   (Instr op (list (Reg 'rax) (Deref reg2 off2))))]
+           [(Instr 'leaq (list a1 a2))
+            #:when (not (Reg? a2))
+            (list (Instr 'leaq (list a1 (Reg 'rax)))
+                  (Instr 'movq (list (Reg 'rax) a2)))]
+           [(TailJmp arg arity)
+            #:when (not (equal? arg (Reg 'rax)))
+            (list (Instr 'movq (list arg (Reg 'rax)))
+                  (TailJmp (Reg 'rax) arity))]
            [_ (list instr)]))
        instrs))]))

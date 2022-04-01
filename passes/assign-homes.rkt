@@ -39,6 +39,10 @@
                      (assign-homes-arg arg2 locals-homes)))]
     [(Instr op `(,arg))
      (Instr op (list (assign-homes-arg arg locals-homes)))]
+    [(IndirectCallq arg arity)
+     (IndirectCallq (assign-homes-arg arg locals-homes) arity)]
+    [(TailJmp arg arity)
+     (TailJmp (assign-homes-arg arg locals-homes) arity)]
     [_ instr]))
 
 (define (assign-homes-arg arg locals-homes)
