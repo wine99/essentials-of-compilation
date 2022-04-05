@@ -7,7 +7,6 @@
 (require "interp.rkt")
 (require "compiler.rkt")
 
-; TODO higher order function tests
 
 ;(debug-level 1)
 (AST-output-syntax 'concrete-syntax)
@@ -32,8 +31,7 @@
 ;(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "cond_test" (tests-for "cond"))
 ;(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "while_test" (tests-for "while"))
 ;(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "vectors_test" (tests-for "vectors"))
-;(define tests-for-functions (remove* '("7" "10" "11") (tests-for "functions")))
-;(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "functions_test" tests-for-functions)
+;(interp-tests "fun" type-check-Lfun compiler-passes interp-Lfun "functions_test" (tests-for "functions"))
 
 
 ;; Uncomment the following when all the passes are complete to
@@ -42,5 +40,4 @@
 (compiler-tests "fun" type-check-Lfun compiler-passes "cond_test" (tests-for "cond"))
 (compiler-tests "fun" type-check-Lfun compiler-passes "while_test" (tests-for "while"))
 (compiler-tests "fun" type-check-Lfun compiler-passes "vectors_test" (tests-for "vectors"))
-(define tests-for-functions (remove* '("7" "10" "11") (tests-for "functions")))
-(compiler-tests "fun" type-check-Lfun compiler-passes "functions_test" tests-for-functions)
+(compiler-tests "fun" type-check-Lfun compiler-passes "functions_test" (tests-for "functions"))

@@ -53,6 +53,11 @@
           [(Call e es)
            (define-values (e^ es^ rt) (type-check-apply env e es))
            (values (Call e^ es^) rt)]
+          [(SetBang var rhs)
+           #:when (and (list? (dict-ref env var #f))
+                       (member '-> (dict-ref env var #f)))
+           (error 'type-check
+                  "assignment to top-level defined function is not allowed: ~a" e)]
           [else ((super type-check-exp env) e)]
           )))
 
@@ -81,6 +86,10 @@
     (define/override (type-check-program e)
       (match e
         [(ProgramDefsExp info ds body)
+         (for ([d ds])
+           (when (eq? (Def-name d) 'main)
+             (error 'type-check
+                    "top-level defined function can not be named 'main'")))
          (define new-env
            (for/fold ([new-env '()])
                      ([d ds])
