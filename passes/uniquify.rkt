@@ -50,4 +50,16 @@
     [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
     [(HasType e type) (HasType (recur e) type)]
     [(Apply fun args)
-     (Apply (recur fun) (map recur args))]))
+     (Apply (recur fun) (map recur args))]
+    [(Lambda param* rty body)
+     (define-values (new-param* new-dict-items)
+       (for/lists (l1 l2) ([x:t param*])
+         (match x:t
+           [`(,x : ,t)
+            (define new-x (gensym x))
+            (values `(,new-x : ,t)
+                    (cons x new-x))])))
+     (Lambda
+      new-param*
+      rty
+      ((uniquify-exp (dict-set-all env new-dict-items)) body))]))

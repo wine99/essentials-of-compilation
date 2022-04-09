@@ -35,4 +35,5 @@
      (Begin (map shrink-exp es) (shrink-exp final-e))]
     [(WhileLoop cnd body) (WhileLoop (shrink-exp cnd) (shrink-exp body))]
     [(HasType e type) (HasType (shrink-exp e) type)]
-    [(Apply fun args) (Apply (shrink-exp fun) (map shrink-exp args))]))
+    [(Apply fun args) (Apply (shrink-exp fun) (map shrink-exp args))]
+    [(Lambda param* rty body) (Lambda param* rty (shrink-exp body))]))

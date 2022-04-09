@@ -1,8 +1,10 @@
 #lang racket
 (require "../utilities.rkt")
+(require "../type-check-Llambda.rkt")
 (provide reveal-functions)
 
 (define (reveal-functions p)
+  (typed-vars true)
   (match p
     [(ProgramDefs info defs)
      (define defs-name-arity
@@ -33,4 +35,5 @@
     [(HasType e type) (HasType (recur e) type)]
     [(Apply fun args)
      (Apply (recur fun) (map recur args))]
+    [(Lambda param* rty body) (Lambda param* rty (recur body))]
     [(or (Int _) (Bool _) (Void) (GetBang _)) exp]))

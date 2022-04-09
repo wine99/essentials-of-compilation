@@ -1,6 +1,6 @@
 #lang racket
 (require "../utilities.rkt")
-(provide uncover-get!)
+(provide uncover-get! collect-set!)
 
 (define (uncover-get! p)
   (match p
@@ -16,7 +16,7 @@
 
 (define (collect-set! e)
   (match e
-    [(or (Int _) (Var _) (Bool _) (Void)) (set)]
+    [(or (Int _) (Var _) (Bool _) (Void) (GetBang _)) (set)]
     [(Prim op '()) (set)]
     [(Prim op es)
      (apply set-union (map collect-set! es))]
@@ -33,6 +33,7 @@
     [(HasType e type) (collect-set! e)]
     [(Apply fun args)
      (apply set-union (map collect-set! (append (list fun) args)))]
+    [(Lambda param* rty body) (collect-set! body)]
     [(or (Collect _) (Allocate _ _) (GlobalValue _)) (set)]))
 
 (define ((uncover-get!-exp set!-vars) e)
@@ -51,4 +52,5 @@
     [(WhileLoop cnd body) (WhileLoop (recur cnd) (recur body))]
     [(HasType e type) (HasType (recur e) type)]
     [(Apply fun args) (Apply (recur fun) (map recur args))]
+    [(Lambda param* rty body) (Lambda param* rty (recur body))]
     [(or (Collect _) (Allocate _ _) (GlobalValue _)) e]))

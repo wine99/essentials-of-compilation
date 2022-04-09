@@ -29,10 +29,10 @@
         (match e
           [(HasType (Var x) t)
            ((type-check-exp env) (Var x))]
-          [(Var x)
+          [(or (Var x) (GetBang x))
            (define t (dict-ref env x))
-           (define var (cond [(typed-vars) (HasType (Var x) t)]
-                             [else (Var x)]))
+           (define var (cond [(typed-vars) (HasType e t)]
+                             [else e]))
            (values var t)]
           [(Closure arity es)
            (define-values (e* t*) (for/lists (e* t*) ([e es])
