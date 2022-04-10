@@ -37,16 +37,18 @@
     ("reveal functions" ,reveal-functions ,interp-Llambda-prime
                         ,type-check-Llambda)
     ("convert to closures" ,convert-to-closures ,interp-Llambda-prime)
-    ;("limit functions" ,limit-functions ,interp-Lfun-prime ,type-check-Lfun)
-    ;("expose allocation" ,expose-allocation ,interp-Lfun-prime #;,type-check-Lfun)
-    ;("remove complex opera*" ,remove-complex-opera* ,interp-Lfun-prime #;,type-check-Lfun)
-    ;("explicate control" ,explicate-control ,interp-Cfun ,type-check-Cfun)
-    ;("select instruction" ,select-instructions ,interp-pseudo-x86-3)
-    ;("uncover live" ,uncover-live ,interp-pseudo-x86-3)
-    ;("build interference" ,build-interference ,interp-pseudo-x86-3)
-    ;("allocate registers" ,allocate-registers ,interp-x86-3)
-    ;("patch instructions" ,patch-instructions ,interp-x86-3)
-    ;("prelude and conclusion" ,prelude-and-conclusion #f)
+    ("limit functions" ,limit-functions ,interp-Llambda-prime
+                       ,type-check-Llambda)
+    ("expose allocation" ,expose-allocation ,interp-Llambda-prime)
+    ("remove complex opera*" ,remove-complex-opera* ,interp-Llambda-prime)
+    ("explicate control" ,explicate-control ,interp-Clambda
+                         ,type-check-Clambda)
+    ("select instruction" ,select-instructions ,interp-pseudo-x86-3)
+    ("uncover live" ,uncover-live ,interp-pseudo-x86-3)
+    ("build interference" ,build-interference ,interp-pseudo-x86-3)
+    ("allocate registers" ,allocate-registers ,interp-x86-3)
+    ("patch instructions" ,patch-instructions ,interp-x86-3)
+    ("prelude and conclusion" ,prelude-and-conclusion #f)
     )
   )
 

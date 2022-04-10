@@ -2260,6 +2260,7 @@ Changelog:
 					 [error-expected (file-exists? (format "./tests/~a.err" test-name))])
 				     (let* ([command (format "./tests/~a.out ~a" test-name input)]
 					    [result (get-value-or-fail command output)])
+                                       (when (file-exists? (format "./tests/~a.out" test-name)) (system (format "rm tests/~a.out" test-name)))
 				       (check-not-false gcc-output "Unable to run program, gcc reported assembly failure")
 				       (check-not-equal? (cadr result) 'timed-out (format "x86 execution timed out after ~a seconds" (caddr result)))
 				       (cond [error-expected
@@ -2517,6 +2518,7 @@ Changelog:
     ))
 
 (define (root-type? t)
-  (match t
-    [`(Vector ,T ...) #t]
-    [else #f]))
+  (or (and (list? t) (set-member? t '->))
+      (match t
+        [`(Vector ,T ...) #t]
+        [else #f])))

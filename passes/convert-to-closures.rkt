@@ -126,7 +126,7 @@
 (define (convert-type t)
   (match t
     [`(,ts ... -> ,rt)
-     `(Vector (Vector _ ,@(map convert-type ts) -> ,(convert-type rt)))]
+     `(Vector ((Vector _) ,@(map convert-type ts) -> ,(convert-type rt)))]
     [`(Vector ,ts ...)
      `(Vector ,@(map convert-type ts))]
     [else t]))

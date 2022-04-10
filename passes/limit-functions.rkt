@@ -58,4 +58,5 @@
                   (append (take args M)
                           (list (Prim 'vector (drop args M))))))
          (Apply (recur fun) (map recur args)))]
+    [(Closure arity funref-and-fvs) (Closure arity (map recur funref-and-fvs))]
     [(or (Int _) (Bool _) (Void) (FunRef _ _)) exp]))

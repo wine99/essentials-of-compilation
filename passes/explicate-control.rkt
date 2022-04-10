@@ -110,7 +110,7 @@
   (match e
     [(or (Int _) (Var _) (Bool _) (Void) (GlobalValue _))
      (values cont blocks)]
-    [(or (Collect _) (Allocate _ _)
+    [(or (Collect _) (Allocate _ _) (AllocateClosure _ _ _)
          (Prim 'read _) (Prim 'vector-set! _))
      (values (Seq e cont) blocks)]
     [(Prim _ _) (values cont blocks)]

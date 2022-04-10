@@ -158,15 +158,27 @@
            (Instr 'movq (list (select-instr-atm rhs) (Deref 'r11 (* 8 (add1 n)))))
            (Instr 'movq (list (Imm 0) v)))]
     [(GlobalValue x) (list (Instr 'movq (list (Global x) v)))]
-    [(Allocate len types)
-     (define tag (calculate-tag (cdr types) len))
-     (list (Instr 'movq (list (Global 'free_ptr) (Reg 'r11)))
-           (Instr 'addq (list (Imm (* 8 (add1 len))) (Global 'free_ptr)))
-           (Instr 'movq (list (Imm tag) (Deref 'r11 0)))
-           (Instr 'movq (list (Reg 'r11) v)))]
+    [(Allocate len `(Vector ,types ...))
+     (x86-of-alloc len (calculate-tag types len) v)]
 
     [(FunRef _ _)
-     (list (Instr 'leaq (list e v)))]))
+     (list (Instr 'leaq (list e v)))]
+    [(AllocateClosure len `(Vector ,types ...) arity)
+     (define arity-tag (arithmetic-shift arity 57))
+     (define tag (bitwise-ior arity-tag (calculate-tag types len)))
+     (x86-of-alloc len tag v)]
+    [(Prim 'procedure-arity (list clos))
+     (list (Instr 'movq (list (select-instr-atm clos) (Reg 'r11)))
+           (Instr 'movq (list (Deref 'r11 0) (Reg 'rax)))
+           (Instr 'sarq (list (Imm 57) (Reg 'rax)))
+           (Instr 'movq (list (Reg 'rax) v)))]
+    ))
+
+(define (x86-of-alloc vec-len tag target)
+  (list (Instr 'movq (list (Global 'free_ptr) (Reg 'r11)))
+        (Instr 'addq (list (Imm (* 8 (add1 vec-len))) (Global 'free_ptr)))
+        (Instr 'movq (list (Imm tag) (Deref 'r11 0)))
+        (Instr 'movq (list (Reg 'r11) target))))
 
 
 (define cmp-suffix #hash((eq? . e)
@@ -179,7 +191,7 @@
 
 (define (calculate-tag types len)
   ;;highest 7 bits are unused
-  ;;lowest 1 bit is 0 saying this is not a forwarding pointer
+  ;;lowest 1 bit is 1 saying this is not a forwarding pointer
   (define is-not-forward-tag 1)
   ;;next 6 lowest bits are the length
   (define length-tag (arithmetic-shift len 1))

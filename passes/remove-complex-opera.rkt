@@ -23,7 +23,8 @@
   (define tmp (gensym 'tmp))
   (match e
     [(or (Int _) (Var _) (Bool _) (Void)) (values e '())]
-    [(or (Collect _) (Allocate _ _) (GlobalValue _))
+    [(or (Collect _) (Allocate _ _) (GlobalValue _)
+         (AllocateClosure _ _ _))
      (define tmp (gensym 'tmp))
      (values (Var tmp) `((,tmp . ,e)))]
     [(Let x rhs body)
@@ -52,7 +53,7 @@
   (match e
     [(or (Int _) (Var _) (Bool _) (Void)
          (Collect _) (Allocate _ _) (GlobalValue _)
-         (FunRef _ _))
+         (FunRef _ _) (AllocateClosure _ _ _))
      e]
     [(GetBang x) (Var x)]
     [(Let x rhs body)

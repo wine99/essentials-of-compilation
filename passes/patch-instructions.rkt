@@ -48,5 +48,11 @@
             #:when (not (equal? arg (Reg 'rax)))
             (list (Instr 'movq (list arg (Reg 'rax)))
                   (TailJmp (Reg 'rax) arity))]
+           [(Instr 'movq (list (Imm n) a2))
+            #:when (and (>= n bigtag) (not (Reg? a2)))
+            (list (Instr 'movq (list (Imm n) (Reg 'rax)))
+                  (Instr 'movq (list (Reg 'rax) a2)))]
            [_ (list instr)]))
        instrs))]))
+
+(define bigtag (expt 2 56))
