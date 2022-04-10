@@ -2518,7 +2518,6 @@ Changelog:
     ))
 
 (define (root-type? t)
-  (or (and (list? t) (set-member? t '->))
-      (match t
+  (match t
         [`(Vector ,T ...) #t]
-        [else #f])))
+        [else #f]))
