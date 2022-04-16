@@ -18,3 +18,8 @@ compiled/
 
 # Dependency tracking files
 *.dep
+
+
+*interf.txt
+*interf.svg
+gui-test

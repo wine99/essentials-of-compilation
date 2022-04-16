@@ -26,7 +26,9 @@
        (match block
          [(Block info instrs)
           (build-interf instrs (dict-ref info 'live-afters) locals-types interf)]))
-     ; (print-dot interf (string-append (symbol->string f) "interf.txt"))
+     (when (gui-mode)
+       (print-dot interf (format "~a-interf.txt" (symbol->string f)))
+       (system (format "dot -Tsvg ~a-interf.txt > ~a-interf.svg" (symbol->string f) (symbol->string f))))
      (Def f empty-params rty (dict-set info 'conflicts interf) blocks)]))
 
 (define (build-interf instrs live-afters locals-types interf)

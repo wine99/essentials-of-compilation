@@ -71,7 +71,7 @@ Changelog:
          make-lets dict-set-all dict-remove-all goto-label get-basic-blocks 
          symbol-append any-tag parse-program vector->set atm? fst
          print-x86 print-x86-class
-         root-type?
+         root-type? gui-mode
          
          (contract-out [struct Prim ((op symbol?) (arg* exp-list?))])
          (contract-out [struct Var ((name symbol?))])
@@ -797,9 +797,17 @@ Changelog:
                                 (cond [(pair? block)
                                        (write-string (symbol->string (car block)) port)
                                        (write-string ":" port)
-                                       (newline-and-indent port col)
-                                       (write-string "      " port)
-                                       (recur (cdr block) port)
+                                       (match (cdr block)
+                                         [(Block info instr*)
+                                          (newline port)
+                                          (print-info info port mode)
+                                          (write-string "      " port)
+                                          (for ([instr instr*])
+                                            (recur instr port))]
+                                         [_
+                                          (newline-and-indent port col)
+                                          (write-string "      " port)
+                                          (recur (cdr block) port)])
                                        (newline-and-indent port col)
                                        (write-string "   " port)]
                                       [else
@@ -2521,3 +2529,5 @@ Changelog:
   (match t
         [`(Vector ,T ...) #t]
         [else #f]))
+
+(define gui-mode (make-parameter #f))
